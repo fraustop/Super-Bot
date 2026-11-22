@@ -1600,32 +1600,27 @@ export const AdminView: React.FC<AdminViewProps> = ({
           >
             {/* Modal Header */}
             <div className="modal-header">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className={`modal-cat-icon-wrap ${editingBlock.category}`}>
                   {editingBlock.category === 'product' ? (
-                    <Package size={22} className="text-emerald-400" />
+                    <Package size={17} className="text-emerald-400" />
                   ) : editingBlock.category === 'service' ? (
-                    <Wrench size={22} className="text-cyan-400" />
+                    <Wrench size={17} className="text-cyan-400" />
                   ) : (
-                    <Brain size={22} className="text-purple-400" />
+                    <Brain size={17} className="text-purple-400" />
                   )}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="modal-title">
-                      {isNewManualBlock ? 'Crear Nuevo Objeto' : 'Modificar Objeto'}
-                    </h3>
-                    <span className={`modal-header-cat-pill ${editingBlock.category}`}>
-                      {editingBlock.category.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="modal-subtitle">
-                    Configura los detalles en el panel izquierdo (25%) y edita o previsualiza el prompt con Markdown a la derecha (75%).
-                  </p>
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                  <h3 className="modal-title truncate">
+                    {isNewManualBlock ? 'Crear Objeto' : 'Editar Objeto'}: <span className="text-cyan-300 font-semibold">{editingBlock.title || 'Sin título'}</span>
+                  </h3>
+                  <span className={`modal-header-cat-pill ${editingBlock.category}`}>
+                    {editingBlock.category.toUpperCase()}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Status Toggle */}
                 <button
                   type="button"
@@ -1637,7 +1632,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   title="Cambiar estado del objeto para el asesor"
                 >
                   <span className="status-indicator-dot"></span>
-                  <span>{editingBlock.status === 'active' ? 'Activo en Asesor' : 'Archivado'}</span>
+                  <span>{editingBlock.status === 'active' ? 'Activo' : 'Pausado'}</span>
                 </button>
 
                 <button
@@ -1646,7 +1641,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   onClick={() => setEditingBlock(null)}
                   title="Cerrar ventana"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
             </div>
@@ -1658,8 +1653,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
               {/* ----------------------------------------------------------- */}
               <aside className="modal-left-details-panel">
                 <div className="left-panel-header">
-                  <span className="panel-section-title">📋 Detalles del Objeto (25%)</span>
-                  <span className="text-xs text-muted">Datos para el sistema</span>
+                  <span className="panel-section-title">📋 Parámetros</span>
+                  <span className="text-xs text-muted">Panel Izquierdo</span>
                 </div>
 
                 {/* Category Switcher Pills */}
@@ -1989,7 +1984,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 )}
 
                 {/* Quick Auto-compile prompt button */}
-                <div className="mt-auto pt-2">
+                <div className="mt-auto pt-1">
                   <button
                     type="button"
                     className="btn-sync-to-prompt"
@@ -1997,10 +1992,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       const generated = generateContentFromBlock(editingBlock);
                       setEditingBlock({ ...editingBlock, content: generated });
                     }}
-                    title="Compilar y pasar estos detalles al prompt maestro de la derecha"
+                    title="Compilar y pasar estos detalles al prompt maestro"
                   >
-                    <RotateCcw size={13} />
-                    <span>⚡ Sincronizar Detalles ➔ Prompt</span>
+                    <RotateCcw size={12} />
+                    <span>⚡ Sincronizar al Prompt</span>
                   </button>
                 </div>
               </aside>
@@ -2011,35 +2006,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <section className="modal-right-prompt-panel">
                 {/* Prompt Top Header */}
                 <div className="prompt-panel-topbar">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <FileText size={18} className="text-cyan-400" />
-                      <h4 className="prompt-panel-title">
-                        Prompt Maestro Oficial para el Bot Asesor (75% del ancho)
-                      </h4>
-                    </div>
-                    <p className="prompt-panel-desc">
-                      Este es el texto exacto que el Bot Asesor comercial consulta en tiempo real en Firestore para cotizar y orientar al cliente.
-                    </p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText size={16} className="text-cyan-400 flex-shrink-0" />
+                    <h4 className="prompt-panel-title truncate">
+                      Prompt Maestro Oficial para el Bot Asesor
+                    </h4>
                   </div>
 
                   {/* Mode Switcher: Edit Mode vs Formatted Preview Mode */}
-                  <div className="prompt-mode-tabs">
+                  <div className="prompt-mode-tabs flex-shrink-0">
                     <button
                       type="button"
                       className={`prompt-mode-tab ${promptViewMode === 'edit' ? 'active' : ''}`}
                       onClick={() => setPromptViewMode('edit')}
                     >
-                      <Edit3 size={14} />
-                      <span>Modo Edición (Markdown)</span>
+                      <Edit3 size={12} />
+                      <span>✏️ Edición Markdown</span>
                     </button>
                     <button
                       type="button"
                       className={`prompt-mode-tab ${promptViewMode === 'preview' ? 'active' : ''}`}
                       onClick={() => setPromptViewMode('preview')}
                     >
-                      <Eye size={14} />
-                      <span>Vista Previa Formateada</span>
+                      <Eye size={12} />
+                      <span>👁️ Vista Previa</span>
                     </button>
                   </div>
                 </div>
@@ -2047,14 +2037,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 {/* Markdown Quick Formatting Toolbar (Available in Edit Mode) */}
                 {promptViewMode === 'edit' && (
                   <div className="markdown-toolbar">
-                    <span className="toolbar-label">Herramientas Markdown:</span>
+                    <span className="toolbar-label">Formato:</span>
                     <button
                       type="button"
                       className="btn-toolbar-tool"
                       onClick={() => handleInsertMarkdownTag('**', '**')}
                       title="Texto en negrita (**texto**)"
                     >
-                      <Bold size={13} />
+                      <Bold size={12} />
                       <span>Negrita</span>
                     </button>
                     <button
@@ -2063,7 +2053,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onClick={() => handleInsertMarkdownTag('*', '*')}
                       title="Texto en cursiva (*texto*)"
                     >
-                      <Italic size={13} />
+                      <Italic size={12} />
                       <span>Cursiva</span>
                     </button>
                     <button
@@ -2072,8 +2062,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onClick={() => handleInsertMarkdownTag('## ')}
                       title="Encabezado H2 (## Título)"
                     >
-                      <Heading2 size={13} />
-                      <span>Título H2</span>
+                      <Heading2 size={12} />
+                      <span>H2</span>
                     </button>
                     <button
                       type="button"
@@ -2089,7 +2079,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onClick={() => handleInsertMarkdownTag('- ')}
                       title="Punto de lista (- Elemento)"
                     >
-                      <List size={13} />
+                      <List size={12} />
                       <span>Lista</span>
                     </button>
                     <button
@@ -2098,7 +2088,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onClick={() => handleInsertMarkdownTag('- **Directriz oficial:** ')}
                       title="Directriz clave"
                     >
-                      <span>✓ Directriz</span>
+                      <span>Directriz</span>
                     </button>
                     <button
                       type="button"
@@ -2106,7 +2096,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onClick={() => handleInsertMarkdownTag('- **Costo:** $', ' MXN')}
                       title="Precio en pesos"
                     >
-                      <span>💲 Precio</span>
+                      <span>$ Precio</span>
                     </button>
                     <button
                       type="button"
@@ -2114,8 +2104,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onClick={() => handleInsertMarkdownTag('`', '`')}
                       title="Insignia de código (`etiqueta`)"
                     >
-                      <Code size={13} />
-                      <span>Insignia</span>
+                      <Code size={12} />
+                      <span>Código</span>
                     </button>
                   </div>
                 )}
@@ -2125,7 +2115,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   {promptViewMode === 'edit' ? (
                     <textarea
                       id="modal-prompt-textarea"
-                      rows={16}
                       value={editingBlock.content}
                       onChange={(e) => setEditingBlock({ ...editingBlock, content: e.target.value })}
                       placeholder="Escribe el bloque en formato Markdown enriquecido con títulos, viñetas y consignas para el asesor..."
@@ -2137,7 +2126,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         renderMarkdownPreview(editingBlock.content, editingBlock.category)
                       ) : (
                         <div className="prompt-empty-preview">
-                          <p>El prompt está vacío actualmente. Escribe en el editor o pulsa "⚡ Sincronizar Detalles" en el panel izquierdo.</p>
+                          <p>El prompt está vacío. Escribe en el editor o pulsa "⚡ Sincronizar al Prompt".</p>
                         </div>
                       )}
                     </div>
@@ -2158,7 +2147,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </span>
                   </div>
                   <span className="prompt-sync-notice">
-                    🟢 Este bloque se inyectará en tiempo real en los documentos maestros de Firestore.
+                    🟢 Firestore en vivo
                   </span>
                 </div>
               </section>
@@ -2180,8 +2169,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 onClick={handleSaveManualBlock}
                 disabled={saving || !editingBlock.title.trim()}
               >
-                <Save size={16} />
-                <span>{saving ? 'Guardando en Firestore...' : 'Guardar y Sincronizar en Firestore'}</span>
+                <Save size={14} />
+                <span>{saving ? 'Guardando...' : 'Guardar en Firestore'}</span>
               </button>
             </div>
           </div>
