@@ -2678,6 +2678,38 @@ html, body {
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
 }
 
+.btn-admin-reset-defaults {
+  width: 100%;
+  margin-top: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.btn-admin-reset-defaults:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+.sidebar-action-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 0.45rem;
+}
+
 .admin-content-panel {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);

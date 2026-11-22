@@ -74,18 +74,29 @@ export interface BotKnowledgeConfig {
 }
 
 export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
-  // 1. PRODUCTOS
+  // 1. PRODUCTOS (Software empaquetado y licencias de pago único)
   {
     id: 'block-prod-web-basic',
-    title: 'Página Web Sencilla ($300 MXN)',
+    title: 'Página Web Sencilla Express ($300 MXN)',
     category: 'product',
-    summary: 'Página web de 1 sola sección para presencia digital inmediata con botón a WhatsApp.',
-    content: 'PRODUCTO - PÁGINA WEB SENCILLA: $300 MXN (pago único inicial). Incluye diseño responsivo de 1 sección, alojamiento en la nube de alta velocidad con candado SSL y botón directo a WhatsApp. Entrega inmediata.',
+    summary: 'Página web moderna de 1 sección para presencia digital inmediata, optimizada para celulares y con botón directo a WhatsApp.',
+    content: `### PRODUCTO OFICIAL: PÁGINA WEB SENCILLA EXPRESS ($300 MXN)
+
+- **Costo base oficial:** $300 MXN (pago único inicial, sin mensualidades forzosas).
+- **Formato de entrega:** Despliegue web inmediato llave en mano en 24 a 48 horas.
+- **Qué incluye:**
+  - 1 sección principal moderna y responsiva (se adapta perfectamente a celulares, tablets y PC).
+  - Alojamiento web de alta velocidad en la nube con candado de seguridad SSL (HTTPS).
+  - Botón flotante directo a WhatsApp para que los clientes compren con un solo clic.
+  - Formulario de contacto y catálogo de servicios/productos destacados.
+- **Mantenimiento y cambios posteriores:** Póliza de ajustes por solo $100 MXN por solicitud (cambio de precios, promociones, fotos).
+- **Consigna para el Asesor:** Presentar como la solución de entrada más accesible del mercado mexicano. Destacar que por solo $300 pesos el cliente ya tiene presencia formal en Google e internet sin pagar miles de pesos en agencias tradicionales.`,
     structuredData: {
       price: 300,
-      deliveryFormat: 'Despliegue web inmediato',
-      includes: '1 sección responsiva, hosting cloud SSL, botón directo a WhatsApp',
-      additionalPackages: 'Póliza de ajustes posteriores por $100 MXN c/u'
+      deliveryFormat: 'Despliegue web en 24-48 hrs',
+      includes: '1 sección responsiva, hosting cloud SSL, botón directo a WhatsApp, formulario',
+      additionalPackages: 'Póliza de ajustes posteriores por $100 MXN c/u',
+      advisorInstructions: 'Presentar como la opción más económica y rápida para empezar a vender en internet hoy mismo.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -94,15 +105,26 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
   },
   {
     id: 'block-prod-app-pos',
-    title: 'Aplicación Web Estática POS ($500 MXN)',
+    title: 'Aplicación Web Estática / POS Mostrador ($500 MXN)',
     category: 'product',
-    summary: 'Software para 1 computadora de mostrador para registro de productos, inventario y cobro.',
-    content: 'PRODUCTO - APLICACIÓN WEB ESTÁTICA POS: $500 MXN (licencia local). Diseñada para operar en mostrador sin mensualidad de servidor. Control de productos, inventario básico y cobro ágil en caja.',
+    summary: 'Software para 1 computadora de mostrador: registro de ventas, control de inventario y cobro ágil sin mensualidad de servidor.',
+    content: `### PRODUCTO OFICIAL: APLICACIÓN WEB ESTÁTICA / POS MOSTRADOR ($500 MXN)
+
+- **Costo base oficial:** $500 MXN (licencia local de pago único para 1 equipo).
+- **Formato de entrega:** Instalación y configuración local lista para operar en caja o mostrador.
+- **Qué incluye:**
+  - Punto de venta ágil para cobro y registro rápido de ventas diarias.
+  - Catálogo de productos con precios, categorías y control de inventario con alertas de stock bajo.
+  - Funcionamiento 100% offline/local: no requiere pagar servidores ni mensualidades fijas para operar.
+  - Reportes de venta del día descargables en Excel o PDF.
+- **Opciones de expansión:** Sincronización multi-dispositivo y respaldo en la nube por $300 MXN/mes opcionales.
+- **Consigna para el Asesor:** Ofrecer a dueños de tienditas, papelerías, talleres, cafeterías o negocios locales que buscan dejar de anotar en libretas y quieren un sistema formal sin pagar mensualidades obligatorias.`,
     structuredData: {
       price: 500,
-      deliveryFormat: 'Instalación local en 1 equipo',
-      includes: 'Control de inventario, punto de venta local, catálogo de productos',
-      additionalPackages: 'Sincronización en la nube desde $300 MXN/mes'
+      deliveryFormat: 'Instalación y configuración local para 1 equipo',
+      includes: 'Punto de venta, control de inventario local, registro de ventas diarias, reportes',
+      additionalPackages: 'Sincronización multi-dispositivo en la nube por $300 MXN/mes',
+      advisorInstructions: 'Ideal para negocios locales que quieren cobrar rápido y controlar inventario sin mensualidades.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -111,14 +133,25 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
   },
   {
     id: 'block-prod-form',
-    title: 'Formulario Inteligente de Pedidos ($400 MXN)',
+    title: 'Formulario Inteligente de Pedidos y Cotizaciones ($400 MXN)',
     category: 'product',
-    summary: 'Formulario web validado para recepción de pedidos y solicitudes 24/7.',
-    content: 'PRODUCTO - FORMULARIO INTELIGENTE: $400 MXN (pago único). Valida datos del cliente, calcula presupuestos y envía la orden directa al correo o WhatsApp del negocio.',
+    summary: 'Formulario web interactivo que valida datos del cliente, calcula presupuestos en tiempo real y envía el pedido a WhatsApp y correo.',
+    content: `### PRODUCTO OFICIAL: FORMULARIO INTELIGENTE DE PEDIDOS ($400 MXN)
+
+- **Costo base oficial:** $400 MXN (pago único inicial).
+- **Formato de entrega:** Enlace web público personalizado o integrado directamente en la página web del cliente.
+- **Qué incluye:**
+  - Validación de datos en tiempo real (nombre, teléfono a 10 dígitos, dirección, opciones seleccionadas).
+  - Cotizador automático integrado que suma productos, paquetes o costos de envío al instante.
+  - Envío automático del resumen del pedido directo al WhatsApp del dueño del negocio y al correo del cliente.
+  - Cero margen de error en pedidos y atención 24 horas aunque el negocio esté cerrado.
+- **Consigna para el Asesor:** Recomendar a negocios que venden productos por catálogo, servicios con cotizaciones personalizadas o restaurantes/reposterías que reciben pedidos por redes sociales.`,
     structuredData: {
       price: 400,
-      deliveryFormat: 'Enlace web directo integrado',
-      includes: 'Validación en vivo de datos, cotización autónoma, envío a WhatsApp/correo'
+      deliveryFormat: 'Enlace web personalizado o embebido en sitio web',
+      includes: 'Validación automática de campos, cálculo de presupuestos, reenvío a WhatsApp y correo',
+      additionalPackages: 'Integración con base de datos en tiempo real por $300 MXN/mes',
+      advisorInstructions: 'Presentar como la mejor forma de recibir pedidos organizados sin errores ni tiempo perdido en chats.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -126,18 +159,29 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     authorEmail: 'sistema@superbot.ai'
   },
 
-  // 2. SERVICIOS
+  // 2. SERVICIOS (Rentas mensuales e infraestructura cloud continua)
   {
     id: 'block-serv-bot-monthly',
-    title: 'Renta Mensual de Bot Inteligente ($1,000 MXN/mes)',
+    title: 'Renta Mensual de Bot Inteligente Multicanal ($1,000 MXN/mes)',
     category: 'service',
-    summary: 'Asistente 24/7 en WhatsApp, Telegram y Web en capas gratuitas de nube.',
-    content: 'SERVICIO - BOTS DE ATENCIÓN INTELIGENTE: $1,000 MXN/mes de renta recurrente. Atención 24/7 en WhatsApp, Telegram y Web. Se monta en Free Tiers de Google Gemini (hasta 1,500 mensajes/día gratis) y WhatsApp (1,000 conversaciones/mes gratis).',
+    summary: 'Asistente virtual 24/7 con IA en WhatsApp Cloud API, Telegram y Web montado en capas gratuitas oficiales.',
+    content: `### SERVICIO OFICIAL: RENTA DE BOT INTELIGENTE MULTICANAL ($1,000 MXN/MES)
+
+- **Tarifa oficial:** $1,000 MXN mensuales (sin plazos forzosos de permanencia).
+- **Canales de operación:** WhatsApp Cloud API (oficial de Meta), Telegram Bot API y widget web flotante.
+- **Alcance y cobertura incluida:**
+  - Atención autónoma las 24 horas del día, los 7 días de la semana, sin descansos ni retrasos.
+  - Resolución inmediata de preguntas frecuentes, explicación de productos, cotizaciones exactas y horarios.
+  - Traspaso inteligente a asesor humano: cuando el prospecto está listo para comprar o requiere llamada, le envía una notificación al teléfono del dueño.
+  - Alojado en capas gratuitas oficiales de Google Gemini (hasta 1,500 mensajes diarios gratis) y Meta (1,000 conversaciones gratuitas al mes).
+  - Incluye mantenimiento continuo, ajustes al conocimiento del bot y monitoreo de disponibilidad.
+- **Consigna para el Asesor:** Resaltar que un bot no duerme, no pide vacaciones y cuesta menos que un empleado de medio tiempo. Comparar con los $3,000 o $5,000 que cobran otras plataformas por bots limitados.`,
     structuredData: {
       monthlyPrice: 1000,
       frequency: 'Mensual recurrente',
       channels: 'WhatsApp Cloud API, Telegram, Sitio Web',
-      includes: 'Atención 24/7, resolución de dudas, filtro de clientes y traspaso a asesor'
+      includes: 'Atención 24/7, cotización automática, filtro y traspaso a llamada/WhatsApp, mantenimiento continuo',
+      advisorInstructions: 'Comparar con el costo de un sueldo o recepcionista. Resaltar atención 24/7 sin perder ventas.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -146,14 +190,25 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
   },
   {
     id: 'block-serv-web-maintenance',
-    title: 'Póliza de Ajustes y Mantenimiento Web ($100 MXN/ajuste)',
+    title: 'Póliza de Ajustes y Mantenimiento Express ($100 MXN/ajuste)',
     category: 'service',
-    summary: 'Modificaciones y actualizaciones de textos, fotos o precios en sitios web.',
-    content: 'SERVICIO - AJUSTES Y MANTENIMIENTO: $100 MXN por cada cambio o ajuste solicitado. Actualización de promociones, cambios de fotos, teléfonos o catálogos.',
+    summary: 'Modificaciones rápidas de precios, textos, imágenes, teléfonos o promociones con entrega en menos de 24 horas.',
+    content: `### SERVICIO OFICIAL: AJUSTES Y MANTENIMIENTO EXPRESS ($100 MXN/AJUSTE)
+
+- **Tarifa oficial:** $100 MXN por cada solicitud o cambio específico (sin mensualidad obligatoria).
+- **Formato:** Por evento o solicitud a través de WhatsApp o correo.
+- **Alcance y qué cubre cada ajuste:**
+  - Actualización de listas de precios o menús.
+  - Cambio de teléfonos de contacto, cuentas bancarias o enlaces de redes sociales.
+  - Reemplazo de fotografías de productos o banners promocionales.
+  - Publicación de avisos de temporada o promociones de fin de semana.
+  - Tiempo de entrega: En menos de 24 horas hábiles.
+- **Consigna para el Asesor:** Asegurarle al cliente que su sitio web nunca se quedará desactualizado ni abandonado, y que no necesita pagar costosas igualas mensuales de mantenimiento para hacer un cambio pequeño.`,
     structuredData: {
       adjustmentPrice: 100,
       frequency: 'Por evento / solicitud',
-      includes: 'Actualización de textos, fotos, precios o enlaces en 24 hrs'
+      includes: 'Cambio de precios, fotos, teléfonos, banners o textos en menos de 24 horas',
+      advisorInstructions: 'Ofrecer como garantía de que el cliente tiene respaldo técnico constante sin pagar cuotas fijas altas.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -162,14 +217,25 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
   },
   {
     id: 'block-serv-cloud-sync',
-    title: 'Sincronización Cloud y Respaldo ($300 MXN/mes)',
+    title: 'Sincronización Cloud y Respaldo NoSQL ($300 MXN/mes)',
     category: 'service',
-    summary: 'Infraestructura de base de datos NoSQL y respaldo en la nube para apps operativas.',
-    content: 'SERVICIO - INFRAESTRUCTURA CLOUD: Desde $300 MXN/mes. Respaldo en tiempo real en Firestore, acceso multi-dispositivo y seguridad en la nube.',
+    summary: 'Base de datos en la nube (Firestore) para acceso multi-equipo, respaldo automático y seguridad de información.',
+    content: `### SERVICIO OFICIAL: SINCRONIZACIÓN CLOUD Y RESPALDO ($300 MXN/MES)
+
+- **Tarifa oficial:** $300 MXN mensuales.
+- **Infraestructura:** Google Cloud Firestore (base de datos NoSQL de alta disponibilidad).
+- **Alcance y cobertura:**
+  - Sincronización en tiempo real para que varios cajeros, celulares o sucursales compartan el mismo catálogo e inventario.
+  - Respaldo automático diario de toda la información de clientes, pedidos y ventas.
+  - Acceso desde cualquier dispositivo con conexión a internet con candado de seguridad y cifrado.
+  - Incluye hasta 50,000 lecturas diarias gratuitas de Firestore, suficiente para el flujo de miles de clientes diarios.
+- **Consigna para el Asesor:** Recomendar a negocios que crecen y necesitan consultar inventario o ventas desde casa, sucursales adicionales o el celular del dueño.`,
     structuredData: {
       monthlyPrice: 300,
       frequency: 'Mensual recurrente',
-      includes: 'Base de datos NoSQL, respaldo continuo, sincronización entre dispositivos'
+      channels: 'Nube Google Cloud / Firestore',
+      includes: 'Base de datos NoSQL, sincronización multi-dispositivo, respaldo diario automático',
+      advisorInstructions: 'Ofrecer a negocios con varias sucursales o dueños que quieren ver sus ventas desde el celular.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -177,13 +243,22 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     authorEmail: 'sistema@superbot.ai'
   },
 
-  // 3. INSTRUCCIONES AL BOT
+  // 3. INSTRUCCIONES AL BOT ASESOR (Comportamiento comercial y reglas maestras)
   {
     id: 'block-inst-no-jargon',
     title: 'Regla: Cero Tecnicismos (Beneficios Reales)',
     category: 'instruction',
     summary: 'Hablar en lenguaje cotidiano de negocio y evitar tecnicismos de ingeniería.',
-    content: 'INSTRUCCIÓN AL ASESOR - CERO TECNICISMOS: Prohibido usar tecnicismos (latencias, RAM, tokens, webhooks, microservicios, arquitecturas) a menos que el cliente pregunte puntualmente por un dato técnico. Hablar siempre de más ventas, tiempo libre, rapidez en celulares y candadito de seguridad.',
+    content: `### INSTRUCCIÓN OBLIGATORIA: CERO TECNICISMOS (LENGUAJE DE NEGOCIO REAL)
+
+- **Tipo de directriz:** Tono y Lenguaje Comercial.
+- **Regla estricta:** Queda estrictamente prohibido usar tecnicismos complejos como "tokens", "latencia", "APIs", "webhooks", "arquitectura NoSQL", "endpoints" o "microservicios" en conversaciones con clientes, a menos que el cliente sea un programador o pregunte puntualmente por ello.
+- **Traducción obligatoria a beneficios del cliente:**
+  - En lugar de "base de datos NoSQL cloud": decir "tus datos respaldados y seguros para verlos en tu celular".
+  - En lugar de "candado SSL y certificados TLS": decir "candadito verde de seguridad para que tus clientes confíen en ti".
+  - En lugar de "cuota de tokens de Gemini": decir "capa gratuita de hasta 1,500 mensajes diarios gratis para no pagar de más".
+  - En lugar de "diseño responsive": decir "se ve perfecto y rápido en cualquier celular".
+- **Consigna para el Asesor:** Comunicar siempre ahorro, tranquilidad, rapidez y aumento de ventas en lenguaje claro y accesible.`,
     structuredData: {
       ruleType: 'Tono y Lenguaje',
       advisorInstructions: 'Traducir especificaciones técnicas en beneficios tangibles para el negocio del cliente.'
@@ -195,13 +270,48 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
   },
   {
     id: 'block-inst-sales-cta',
-    title: 'Consigna: Actitud de Vendedor Empático con CTA',
+    title: 'Consigna: Actitud Comercial Empática con Llamado a la Acción',
     category: 'instruction',
     summary: 'Responder con entusiasmo, seguridad y cerrar con una pregunta de avance comercial.',
-    content: 'INSTRUCCIÓN AL ASESOR - ACTITUD DE VENTA: Actuar siempre como un vendedor profesional y seguro. Cada respuesta explicativa o de cotización debe concluir con un llamado a la acción comercial (ej. "¿Qué te parece esta opción para tu negocio?", "¿Quieres que iniciemos con tu proyecto?").',
+    content: `### INSTRUCCIÓN OBLIGATORIA: ACTITUD COMERCIAL EMPÁTICA CON CTA
+
+- **Tipo de directriz:** Actitud y Cierre de Ventas.
+- **Regla estricta:** El Bot Asesor no debe limitarse a responder preguntas como una enciclopedia fría; debe actuar como un asesor comercial entusiasta, cercano y profesional.
+- **Estructura de cada respuesta:**
+  1. Validar la duda del cliente con amabilidad y calidez ("¡Excelente pregunta!", "Con gusto te explico", "Es una gran idea para tu negocio").
+  2. Brindar la información o cotización de forma directa, sin rodeos y con transparencia total.
+  3. Cerrar SIEMPRE con una pregunta de avance comercial o llamado a la acción (CTA) claro, por ejemplo:
+     - "¿Qué tipo de negocio tienes para decirte cuál opción te conviene más?"
+     - "¿Te gustaría que iniciemos con tu página web por solo $300 pesos?"
+     - "¿Prefieres que agendemos una llamada rápida o te contactamos por WhatsApp para afinar los detalles?"`,
     structuredData: {
       ruleType: 'Actitud Comercial',
       advisorInstructions: 'Siempre cerrar con una pregunta de enganche comercial o llamado a la acción.'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+  {
+    id: 'block-inst-autonomous-quoting',
+    title: 'Consigna: Cotización Autónoma y Comparativo de Ahorro',
+    category: 'instruction',
+    summary: 'Calcular cotizaciones de inmediato desglosando pagos iniciales y recurrentes.',
+    content: `### INSTRUCCIÓN OBLIGATORIA: COTIZACIÓN AUTÓNOMA Y COMPARATIVO DE AHORRO
+
+- **Tipo de directriz:** Cotización y Precios Claros.
+- **Regla estricta:** Nunca ocultar precios ni pedir correo electrónico antes de cotizar. Dar precios oficiales de inmediato:
+  - Página Web Sencilla: $300 MXN (pago único inicial).
+  - Ajustes o mantenimiento: $100 MXN por cambio.
+  - Aplicación POS local: $500 MXN (pago único).
+  - Renta de Bot Multicanal: $1,000 MXN/mes.
+- **Comparativa de mercado:**
+  - Destacar que una agencia de publicidad o desarrollo tradicional cobra entre $3,000 y $10,000 pesos por una página web básica y mensualidades obligatorias de mantenimiento.
+  - En Super-Bot obtienen la misma calidad y rapidez por solo $300 pesos, ahorrando más del 80% de su presupuesto.`,
+    structuredData: {
+      ruleType: 'Cotización Inmediata',
+      advisorInstructions: 'Desglosar pago inicial y mensual, comparando con agencias tradicionales.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -213,7 +323,14 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     title: 'Redirección: Auto-construcción con Google Gemini',
     category: 'instruction',
     summary: 'Si el cliente quiere hacer su página él mismo, redirigirlo a Gemini y ofrecer apoyo.',
-    content: 'INSTRUCCIÓN AL ASESOR - REDIRECCIÓN A GEMINI: Si el cliente pregunta si puede hacer la página él mismo, explicarle con entusiasmo que la IA puede guiarlo y proporcionarle el enlace https://gemini.google.com en otra pestaña. Recordarle con simpatía que si prefiere ahorrar tiempo nosotros se la entregamos lista desde $300 MXN.',
+    content: `### INSTRUCCIÓN OBLIGATORIA: REDIRECCIÓN A GOOGLE GEMINI
+
+- **Tipo de directriz:** Redirección Asistida.
+- **Situación:** Cuando el cliente pregunte si él mismo puede programar o crear su propia página web o bot.
+- **Respuesta obligatoria:**
+  1. Felicitar su iniciativa y explicarle con entusiasmo que la Inteligencia Artificial hace posible construir código paso a paso.
+  2. Proporcionarle el enlace oficial: https://gemini.google.com (indicándole que puede abrirlo para pedirle prompts y código paso a paso).
+  3. Recordarle amablemente que si no cuenta con el tiempo para aprender a programar, depurar errores o configurar servidores, en Super-Bot se la entregamos lista y funcionando en 24-48 horas desde solo $300 pesos.`,
     structuredData: {
       ruleType: 'Redirección Asistida',
       advisorInstructions: 'Facilitar https://gemini.google.com y recordar la opción llave en mano de SuperBot.'
@@ -224,14 +341,21 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     authorEmail: 'sistema@superbot.ai'
   },
   {
-    id: 'block-inst-autonomous-quoting',
-    title: 'Consigna: Motor Autónomo de Cotizaciones',
+    id: 'block-inst-human-handoff',
+    title: 'Consigna: Traspaso a Asesor Humano (WhatsApp / Llamada)',
     category: 'instruction',
-    summary: 'Calcular cotizaciones de inmediato desglosando pagos iniciales y recurrentes.',
-    content: 'INSTRUCCIÓN AL ASESOR - COTIZACIÓN AUTÓNOMA: Calcular presupuestos inmediatamente desglosando costo único y costo mensual. Mostrar siempre el comparativo frente a lo que cobra la competencia en el mercado para evidenciar el ahorro que obtiene con SuperBot.',
+    summary: 'Cuando el cliente esté listo para contratar o requiera llamada directa con Francisco Frausto.',
+    content: `### INSTRUCCIÓN OBLIGATORIA: TRASPASO A ASESOR HUMANO (FRANCISCO FRAUSTO)
+
+- **Tipo de directriz:** Cierre y Conversión.
+- **Situación:** Cuando el cliente esté listo para contratar, tenga requerimientos especiales de software a medida o solicite hablar con una persona.
+- **Procedimiento:**
+  - Invitar al cliente a dar clic en el botón de WhatsApp o solicitar su número de teléfono celular para que Francisco Frausto lo contacte personalmente.
+  - Confirmarle que el trato es directo, sin intermediarios, con entrega rápida y garantía de funcionamiento.
+  - Mantener siempre un trato formal, cordial y respetuoso.`,
     structuredData: {
-      ruleType: 'Cotización Inmediata',
-      advisorInstructions: 'Desglosar pago inicial y mensual, comparando con agencias tradicionales.'
+      ruleType: 'Cierre Comercial',
+      advisorInstructions: 'Facilitar botón de WhatsApp o pedir número para contacto directo con Francisco Frausto.'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -263,7 +387,7 @@ export const DEFAULT_BOT_KNOWLEDGE: BotKnowledgeConfig = {
   updatedBy: 'system'
 };
 
-const STORAGE_KEY = 'superbot_cached_knowledge_v3';
+const STORAGE_KEY = 'superbot_cached_knowledge_v4';
 const KNOWLEDGE_DOC_PATH = { collection: 'bot_knowledge', docId: 'active_config' };
 
 // In-memory active configuration
