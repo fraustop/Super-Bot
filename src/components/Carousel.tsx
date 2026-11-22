@@ -99,13 +99,14 @@ const slides: SlideData[] = [
   }
 ];
 
+const ROTATION_INTERVAL = 4500; // 4.5 seconds per card
+
 interface CarouselProps {
   onOpenContact?: () => void;
 }
 
 export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   const nextSlide = useCallback(() => {
@@ -116,15 +117,14 @@ export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
     setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
   }, []);
 
-  // Automatic cycle every 6.5 seconds when not paused by hover
+  // Continuous auto-rotation every 4.5 seconds
   useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       nextSlide();
-    }, 6500);
+    }, ROTATION_INTERVAL);
 
-    return () => clearInterval(interval);
-  }, [isPaused, nextSlide]);
+    return () => clearInterval(timer);
+  }, [currentIndex, nextSlide]);
 
   // Touch gesture support for mobile devices
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -142,76 +142,85 @@ export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
     touchStartX.current = null;
   };
 
-  const currentSlide = slides[currentIndex];
-
   return (
     <section
       className="carousel-section"
       aria-label="Soluciones para pequeños negocios"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <div className="carousel-container">
-        {/* Carousel Slide Card */}
-        <div className="carousel-slide-card" key={currentSlide.id}>
-          {/* Left / Info Column */}
-          <div className="slide-content">
-            <div className="slide-badge">
-              <span className="slide-badge-icon">{currentSlide.badgeIcon}</span>
-              <span className="slide-badge-text">{currentSlide.tag}</span>
-            </div>
-
-            <h2 className="slide-title">{currentSlide.title}</h2>
-            <p className="slide-subtitle">{currentSlide.subtitle}</p>
-
-            {/* Utility points */}
-            <div className="slide-utilities-list">
-              {currentSlide.utilities.map((item, idx) => (
-                <div className="utility-item" key={idx}>
-                  <div className="utility-icon">
-                    <CheckCircle2 size={18} />
+        {/* Carousel Viewport / Sliding Window */}
+        <div className="carousel-viewport">
+          <div
+            className="carousel-track"
+            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          >
+            {slides.map((slide, idx) => (
+              <div
+                className={`carousel-slide-card ${idx === currentIndex ? 'active-slide' : ''}`}
+                key={slide.id}
+                aria-hidden={idx !== currentIndex}
+              >
+                {/* Left / Info Column */}
+                <div className="slide-content">
+                  <div className="slide-badge">
+                    <span className="slide-badge-icon">{slide.badgeIcon}</span>
+                    <span className="slide-badge-text">{slide.tag}</span>
                   </div>
-                  <div className="utility-text">
-                    <strong className="utility-heading">{item.title}</strong>
-                    <span className="utility-desc">{item.desc}</span>
+
+                  <h2 className="slide-title">{slide.title}</h2>
+                  <p className="slide-subtitle">{slide.subtitle}</p>
+
+                  {/* Utility points */}
+                  <div className="slide-utilities-list">
+                    {slide.utilities.map((item, uIdx) => (
+                      <div className="utility-item" key={uIdx}>
+                        <div className="utility-icon">
+                          <CheckCircle2 size={18} />
+                        </div>
+                        <div className="utility-text">
+                          <strong className="utility-heading">{item.title}</strong>
+                          <span className="utility-desc">{item.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Slide Action */}
+                  <div className="slide-action-row">
+                    <button
+                      type="button"
+                      className="btn-slide-cta"
+                      onClick={onOpenContact}
+                    >
+                      <span>Solicitar información</span>
+                      <ArrowRight size={17} />
+                    </button>
+                    <div className="accessible-badge">
+                      <Sparkles size={14} />
+                      <span>Diseñado para emprendedores y PyMEs</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Slide Action */}
-            <div className="slide-action-row">
-              <button
-                type="button"
-                className="btn-slide-cta"
-                onClick={onOpenContact}
-              >
-                <span>Solicitar información</span>
-                <ArrowRight size={17} />
-              </button>
-              <div className="accessible-badge">
-                <Sparkles size={14} />
-                <span>Diseñado para emprendedores y PyMEs</span>
+                {/* Right / Image Column */}
+                <div className="slide-visual">
+                  <div className="image-frame">
+                    <img
+                      src={slide.image}
+                      alt={slide.imageAlt}
+                      className="slide-image"
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                    />
+                    <div className="image-sheen"></div>
+                    <div className="slide-counter-pill">
+                      <span>{idx + 1}</span> / <span>{slides.length}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Right / Image Column */}
-          <div className="slide-visual">
-            <div className="image-frame">
-              <img
-                src={currentSlide.image}
-                alt={currentSlide.imageAlt}
-                className="slide-image"
-                loading="eager"
-              />
-              <div className="image-sheen"></div>
-              <div className="slide-counter-pill">
-                <span>{currentIndex + 1}</span> / <span>{slides.length}</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -227,20 +236,28 @@ export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
             <ChevronLeft size={22} />
           </button>
 
-          {/* Indicators / Dots */}
+          {/* Indicators / Progress Tabs */}
           <div className="carousel-indicators">
-            {slides.map((slide, idx) => (
-              <button
-                key={slide.id}
-                type="button"
-                className={`indicator-dot ${idx === currentIndex ? 'active' : ''}`}
-                onClick={() => setCurrentIndex(idx)}
-                aria-label={`Ir a diapositiva ${idx + 1}: ${slide.tag}`}
-              >
-                <span className="indicator-progress"></span>
-                <span className="indicator-label">{slide.tag}</span>
-              </button>
-            ))}
+            {slides.map((slide, idx) => {
+              const isActive = idx === currentIndex;
+              return (
+                <button
+                  key={slide.id}
+                  type="button"
+                  className={`indicator-dot ${isActive ? 'active' : ''}`}
+                  onClick={() => setCurrentIndex(idx)}
+                  aria-label={`Ir a diapositiva ${idx + 1}: ${slide.tag}`}
+                >
+                  <span className="indicator-progress-track">
+                    <span
+                      key={isActive ? `progress-${currentIndex}` : `idle-${idx}`}
+                      className={`indicator-progress-fill ${isActive ? 'animating' : ''}`}
+                    />
+                  </span>
+                  <span className="indicator-label">{slide.tag}</span>
+                </button>
+              );
+            })}
           </div>
 
           <button
