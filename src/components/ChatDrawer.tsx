@@ -1,0 +1,330 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  Send,
+  RotateCcw,
+  Key,
+  UserCheck,
+  Bot,
+  User,
+  Sparkles,
+  Check
+} from 'lucide-react';
+import {
+  askGemini,
+  getGeminiApiKey,
+  saveGeminiApiKey,
+  type ChatMessage
+} from '../services/gemini';
+
+interface ChatDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onContactAdvisor?: () => void;
+}
+
+export const ChatDrawer: React.FC<ChatDrawerProps> = ({
+  isOpen,
+  onClose,
+  onContactAdvisor
+}) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome',
+      sender: 'bot',
+      text: '¡Hola! 👋 Soy Super-Bot. Estoy aquí para resolver tus dudas sobre nuestros servicios de formularios, aplicaciones operativas y bots de atención para pequeños negocios. ¿En qué puedo ayudarte?',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [keySavedMessage, setKeySavedMessage] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll to bottom of chat
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 250);
+    }
+  }, [isOpen, messages]);
+
+  useEffect(() => {
+    setApiKeyInput(getGeminiApiKey());
+  }, []);
+
+  const handleSendMessage = async (textToSend?: string) => {
+    const text = (textToSend || inputText).trim();
+    if (!text || loading) return;
+
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInputText('');
+    setLoading(true);
+
+    try {
+      const response = await askGemini(messages, text);
+      const botMsg: ChatMessage = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: response.text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        suggestAdvisor: response.suggestAdvisor
+      };
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      const errorMsg: ChatMessage = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: 'No sé la respuesta, ¿quieres que te enlace con un asesor?',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        suggestAdvisor: true
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearChat = () => {
+    setMessages([
+      {
+        id: 'welcome-reset',
+        sender: 'bot',
+        text: 'Conversación reiniciada. ¿En qué duda sobre nuestros servicios te puedo apoyar?',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+  };
+
+  const handleSaveApiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveGeminiApiKey(apiKeyInput);
+    setKeySavedMessage(true);
+    setTimeout(() => {
+      setKeySavedMessage(false);
+      setShowKeyModal(false);
+    }, 1200);
+  };
+
+  const quickQuestions = [
+    '¿Qué servicios ofrecen?',
+    '¿Cómo funciona el bot de WhatsApp?',
+    '¿Para qué sirve un formulario?',
+    '¿Qué incluye una app operativa?',
+    '¿Cuáles son los costos?'
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="chat-drawer-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="chat-drawer-panel" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="chat-drawer-header">
+          <div className="chat-header-brand">
+            <div className="chat-bot-avatar-wrap">
+              <img src="/bot-icon.png" alt="Super-Bot" className="chat-bot-avatar" />
+              <span className="chat-online-dot" title="En línea"></span>
+            </div>
+            <div className="chat-title-group">
+              <div className="chat-title-row">
+                <h3 className="chat-title">Super-Bot</h3>
+                <span className="chat-ai-badge">
+                  <Sparkles size={11} />
+                  <span>Gemini IA</span>
+                </span>
+              </div>
+              <p className="chat-subtitle">Resolución de dudas sobre servicios</p>
+            </div>
+          </div>
+
+          <div className="chat-header-actions">
+            <button
+              type="button"
+              className="chat-header-btn"
+              onClick={() => setShowKeyModal(!showKeyModal)}
+              title="Configurar Gemini API Key"
+              aria-label="Configurar clave API"
+            >
+              <Key size={17} />
+            </button>
+            <button
+              type="button"
+              className="chat-header-btn"
+              onClick={handleClearChat}
+              title="Reiniciar chat"
+              aria-label="Reiniciar chat"
+            >
+              <RotateCcw size={17} />
+            </button>
+            <button
+              type="button"
+              className="chat-header-btn btn-close-chat"
+              onClick={onClose}
+              title="Cerrar panel de chat"
+              aria-label="Cerrar panel"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* API Key Modal Drawer */}
+        {showKeyModal && (
+          <div className="api-key-banner">
+            <div className="api-key-banner-header">
+              <span className="api-key-title">Clave de Gemini API (Opcional)</span>
+              <button
+                type="button"
+                className="btn-text-close"
+                onClick={() => setShowKeyModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <p className="api-key-desc">
+              Puedes ingresar tu API Key de Google AI Studio para usar Gemini en vivo, o dejarlo vacío para usar el motor con contexto local.
+            </p>
+            <form onSubmit={handleSaveApiKey} className="api-key-form">
+              <input
+                type="password"
+                placeholder="AIzaSy..."
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                className="api-key-input"
+              />
+              <button type="submit" className="btn-save-key">
+                {keySavedMessage ? <Check size={16} /> : 'Guardar'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Message Stream */}
+        <div className="chat-messages-container">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`chat-message-row ${msg.sender === 'user' ? 'user-row' : 'bot-row'}`}
+            >
+              {msg.sender === 'bot' && (
+                <div className="message-avatar bot-avatar-mini">
+                  <Bot size={16} />
+                </div>
+              )}
+
+              <div className="message-bubble-wrapper">
+                <div className={`message-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-bot'}`}>
+                  <p className="message-text">{msg.text}</p>
+
+                  {/* Suggest human advisor button when bot doesn't know */}
+                  {msg.suggestAdvisor && (
+                    <div className="advisor-action-box">
+                      <button
+                        type="button"
+                        className="btn-connect-advisor"
+                        onClick={onContactAdvisor || onClose}
+                      >
+                        <UserCheck size={16} />
+                        <span>Enlazarme con un asesor ahora</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <span className="message-timestamp">{msg.timestamp}</span>
+              </div>
+
+              {msg.sender === 'user' && (
+                <div className="message-avatar user-avatar-mini">
+                  <User size={16} />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {loading && (
+            <div className="chat-message-row bot-row">
+              <div className="message-avatar bot-avatar-mini">
+                <Bot size={16} />
+              </div>
+              <div className="message-bubble bubble-bot typing-indicator">
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Quick Suggestion Pills */}
+        <div className="chat-quick-suggestions">
+          <span className="quick-suggestions-label">Preguntas sugeridas:</span>
+          <div className="quick-pills-row">
+            {quickQuestions.map((q, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className="quick-pill-btn"
+                onClick={() => handleSendMessage(q)}
+                disabled={loading}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Form */}
+        <form
+          className="chat-input-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendMessage();
+          }}
+        >
+          <div className="chat-input-wrap">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Hazle una pregunta a Super-Bot..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              disabled={loading}
+              className="chat-input-field"
+            />
+            <button
+              type="submit"
+              className="chat-send-btn"
+              disabled={!inputText.trim() || loading}
+              aria-label="Enviar pregunta"
+            >
+              <Send size={18} />
+            </button>
+          </div>
+          <span className="chat-disclaimer">
+            Super-Bot responde con información oficial del catálogo y preguntas frecuentes.
+          </span>
+        </form>
+      </div>
+    </div>
+  );
+};
