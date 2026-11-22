@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { Carousel } from './components/Carousel';
 import { AuthModal } from './components/AuthModal';
 import { subscribeToAuth, logoutUser } from './firebase/config';
 import type { User } from 'firebase/auth';
@@ -54,8 +55,10 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
       />
 
-      {/* Body: intentionally empty as requested */}
-      <main className="superbot-body" id="main-content" />
+      {/* Body: Solutions Carousel for small businesses */}
+      <main className="superbot-body" id="main-content">
+        <Carousel onOpenContact={() => setIsAuthOpen(true)} />
+      </main>
 
       {/* Authentication Modal */}
       <AuthModal

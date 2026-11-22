@@ -6,7 +6,10 @@ const STATIC_ASSETS = [
   '/icon-192.png',
   '/icon-512.png',
   '/bot-icon.png',
-  '/favicon.png'
+  '/favicon.png',
+  '/carousel-forms.jpg',
+  '/carousel-apps.jpg',
+  '/carousel-bots.jpg'
 ];
 
 self.addEventListener('install', (event) => {
