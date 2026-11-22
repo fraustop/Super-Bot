@@ -5061,6 +5061,134 @@ html, body {
   background: rgba(0, 0, 0, 0.6);
 }
 
+/* Image Source Switcher Tabs */
+.img-source-switch-tabs {
+  display: flex;
+  gap: 0.2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.12rem;
+}
+
+.btn-img-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0.18rem 0.4rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-img-tab.active {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--accent-cyan);
+}
+
+.btn-img-tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+/* Image Upload Dropzone / Button */
+.img-upload-dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.btn-file-upload-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px dashed rgba(56, 189, 248, 0.45);
+  border-radius: 7px;
+  background: rgba(56, 189, 248, 0.06);
+  color: var(--accent-cyan);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.btn-file-upload-trigger:hover {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: var(--accent-cyan);
+  transform: translateY(-1px);
+}
+
+.hidden-file-input {
+  display: none !important;
+}
+
+.file-upload-hint {
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+.file-upload-error {
+  font-size: 0.66rem;
+  color: #f87171;
+  font-weight: 600;
+}
+
+/* Image URL Input Wrap */
+.img-url-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+/* Modal Preview Bar */
+.modal-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  background: rgba(0, 0, 0, 0.85);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.modal-preview-source-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.btn-remove-img-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-remove-img-preview:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fee2e2;
+}
+
 .btn-sync-to-prompt {
   width: 100%;
   display: inline-flex;

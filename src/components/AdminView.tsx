@@ -26,7 +26,9 @@ import {
   Heading2,
   List,
   Code,
-  Globe
+  Globe,
+  Upload,
+  Link
 } from 'lucide-react';
 import {
   type BotKnowledgeConfig,
@@ -72,6 +74,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // Status & notifications
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Image upload and mode state
+  const [imageSourceMode, setImageSourceMode] = useState<'upload' | 'url'>('upload');
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToBotKnowledge((freshConfig) => {
@@ -129,11 +136,90 @@ export const AdminView: React.FC<AdminViewProps> = ({
     return lines.join('\n\n');
   };
 
+  // Helper to optimize and convert an uploaded file into a compact, fast-loading Data URL
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingBlock) return;
+
+    if (!file.type.startsWith('image/')) {
+      setImageUploadError('Por favor selecciona un archivo de imagen válido (.png, .jpg, .webp).');
+      return;
+    }
+
+    setImageUploadError(null);
+    setUploadingImage(true);
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const maxWidth = 1000;
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(event.target?.result as string);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            let result = canvas.toDataURL('image/webp', 0.85);
+            if (!result.startsWith('data:image/webp')) {
+              result = canvas.toDataURL('image/jpeg', 0.85);
+            }
+            resolve(result);
+          };
+          img.onerror = () => reject(new Error('No se pudo procesar la imagen seleccionada.'));
+          img.src = event.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('Error al leer el archivo en tu dispositivo.'));
+        reader.readAsDataURL(file);
+      });
+
+      setEditingBlock({
+        ...editingBlock,
+        imageUrl: dataUrl,
+        structuredData: {
+          ...editingBlock.structuredData,
+          imageUrl: dataUrl
+        }
+      });
+    } catch (err: any) {
+      setImageUploadError(err.message || 'Error al procesar la imagen.');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (!editingBlock) return;
+    setEditingBlock({
+      ...editingBlock,
+      imageUrl: '',
+      structuredData: {
+        ...editingBlock.structuredData,
+        imageUrl: ''
+      }
+    });
+  };
+
   // Open modal to manually edit an existing block
   const handleOpenManualEdit = (block: BotKnowledgeBlock) => {
     setEditingBlock(JSON.parse(JSON.stringify(block)));
     setIsNewManualBlock(false);
     setPromptViewMode('edit');
+    const img = block.imageUrl || block.structuredData?.imageUrl || '';
+    setImageSourceMode(img.startsWith('data:image/') ? 'upload' : 'url');
+    setImageUploadError(null);
   };
 
   // Open modal to manually create a new block (CLEAN: No dummy/example data and no undefined values)
@@ -169,6 +255,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setEditingBlock(newBlock);
     setIsNewManualBlock(true);
     setPromptViewMode('edit');
+    setImageSourceMode('upload');
+    setImageUploadError(null);
   };
 
   // Save manual block directly to Firestore
@@ -1646,24 +1734,76 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </div>
 
                     <div className="left-field-group">
-                      <label className="field-label-compact">Imagen para el Carrusel:</label>
-                      <input
-                        type="text"
-                        value={editingBlock.imageUrl || editingBlock.structuredData?.imageUrl || ''}
-                        onChange={(e) => {
-                          const url = e.target.value;
-                          setEditingBlock({
-                            ...editingBlock,
-                            imageUrl: url,
-                            structuredData: {
-                              ...editingBlock.structuredData,
-                              imageUrl: url
-                            }
-                          });
-                        }}
-                        placeholder="Ruta local (/carousel-websites.jpg) o URL web"
-                        className="field-input-compact"
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="field-label-compact">Imagen para el Carrusel:</label>
+                        {/* Tab Switcher between File Upload and URL */}
+                        <div className="img-source-switch-tabs">
+                          <button
+                            type="button"
+                            className={`btn-img-tab ${imageSourceMode === 'upload' ? 'active' : ''}`}
+                            onClick={() => setImageSourceMode('upload')}
+                            title="Subir archivo desde tu equipo"
+                          >
+                            <Upload size={11} />
+                            <span>Subir Archivo</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-img-tab ${imageSourceMode === 'url' ? 'active' : ''}`}
+                            onClick={() => setImageSourceMode('url')}
+                            title="Ingresar URL absoluta o web"
+                          >
+                            <Link size={11} />
+                            <span>URL Web</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Mode A: Upload File */}
+                      {imageSourceMode === 'upload' && (
+                        <div className="img-upload-dropzone">
+                          <label htmlFor="admin-modal-file-upload" className="btn-file-upload-trigger">
+                            <Upload size={14} />
+                            <span>{uploadingImage ? 'Procesando imagen...' : '📁 Elegir archivo de imagen'}</span>
+                          </label>
+                          <input
+                            id="admin-modal-file-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileUpload}
+                            disabled={uploadingImage}
+                            className="hidden-file-input"
+                          />
+                          <span className="file-upload-hint">PNG, JPG, WEBP (se optimiza automáticamente)</span>
+                          {imageUploadError && (
+                            <span className="file-upload-error">{imageUploadError}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Mode B: Absolute URL */}
+                      {imageSourceMode === 'url' && (
+                        <div className="img-url-input-wrap">
+                          <input
+                            type="text"
+                            value={editingBlock.imageUrl || editingBlock.structuredData?.imageUrl || ''}
+                            onChange={(e) => {
+                              const url = e.target.value;
+                              setEditingBlock({
+                                ...editingBlock,
+                                imageUrl: url,
+                                structuredData: {
+                                  ...editingBlock.structuredData,
+                                  imageUrl: url
+                                }
+                              });
+                            }}
+                            placeholder="https://ejemplo.com/foto.jpg o /carousel-websites.jpg"
+                            className="field-input-compact"
+                          />
+                          <span className="file-upload-hint">URL absoluta (https://...) o ruta local (/carousel-...)</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Quick Image Presets */}
@@ -1756,7 +1896,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             (e.currentTarget as HTMLElement).style.display = 'none';
                           }}
                         />
-                        <span className="modal-preview-label">Vista previa en carrusel</span>
+                        <div className="modal-preview-bar">
+                          <span className="modal-preview-source-badge">
+                            {(editingBlock.imageUrl || '').startsWith('data:image/') ? '📁 Archivo Subido' : '🌐 URL Absoluta'}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-remove-img-preview"
+                            onClick={handleRemoveImage}
+                            title="Quitar esta imagen"
+                          >
+                            <Trash2 size={11} />
+                            <span>Quitar</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
