@@ -6,7 +6,8 @@ import {
   UserCheck,
   Bot,
   User,
-  Sparkles
+  Sparkles,
+  ExternalLink
 } from 'lucide-react';
 import {
   askGemini,
@@ -90,7 +91,8 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
         sender: 'bot',
         text: response.text,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        suggestAdvisor: response.suggestAdvisor
+        suggestAdvisor: response.suggestAdvisor,
+        actionLink: response.actionLink
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch (err) {
@@ -120,10 +122,10 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
   const quickQuestions = [
     '¿Qué servicios ofrecen?',
+    '¿Cuáles son los costos?',
+    '¿Puedo hacer mi página yo mismo?',
     '¿Cómo funciona el bot de WhatsApp?',
-    '¿Para qué sirve un formulario?',
-    '¿Qué incluye una app operativa?',
-    '¿Cuáles son los costos?'
+    '¿Qué incluye una app operativa?'
   ];
 
   if (!isOpen) return null;
@@ -189,7 +191,22 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                 <div className={`message-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-bot'}`}>
                   <p className="message-text">{msg.text}</p>
 
-                  {/* Suggest human advisor button when bot doesn't know */}
+                  {/* External Action Button (e.g. Abrir Google Gemini en otra pestaña) */}
+                  {(msg.actionLink || (msg.text.includes('gemini.google.com') && !msg.actionLink)) && (
+                    <div className="chat-action-link-box">
+                      <a
+                        href={msg.actionLink?.url || 'https://gemini.google.com'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-open-gemini"
+                      >
+                        <ExternalLink size={16} />
+                        <span>{msg.actionLink?.label || '🚀 Abrir Google Gemini en otra pestaña'}</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Suggest human advisor button when bot suggests it */}
                   {msg.suggestAdvisor && (
                     <div className="advisor-action-box">
                       <button

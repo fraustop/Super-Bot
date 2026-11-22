@@ -1480,6 +1480,40 @@ html, body {
   box-shadow: 0 5px 14px rgba(16, 185, 129, 0.45);
 }
 
+/* External Action Box (Gemini redirection) */
+.chat-action-link-box {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(56, 189, 248, 0.25);
+}
+
+.btn-open-gemini {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #2563eb 100%);
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.84rem;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+  transition: all 0.2s ease;
+  font-family: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-open-gemini:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.55);
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 50%, #1d4ed8 100%);
+}
+
 /* Typing Dots */
 .typing-indicator {
   display: flex;
