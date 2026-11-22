@@ -1,0 +1,24 @@
+{
+  "short_name": "SuperBot",
+  "name": "SuperBot - La inteligencia artificial a tu servicio",
+  "description": "SuperBot: Automatización de mensajes y respuestas con Meta API para ventas y atención de dudas.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#181a1f",
+  "theme_color": "#232830",
+  "display": "standalone",
+  "orientation": "portrait"
+}
