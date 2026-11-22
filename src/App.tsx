@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { Carousel } from './components/Carousel';
 import { ChatDrawer } from './components/ChatDrawer';
 import { AuthModal } from './components/AuthModal';
+import { AdvisorModal } from './components/AdvisorModal';
 import { subscribeToAuth, logoutUser } from './firebase/config';
 import { MessageSquareText } from 'lucide-react';
 import type { User } from 'firebase/auth';
@@ -16,6 +17,7 @@ export const App: React.FC = () => {
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | { displayName: string | null; email: string | null } | null>(null);
 
   useEffect(() => {
@@ -89,12 +91,17 @@ export const App: React.FC = () => {
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         onContactAdvisor={() => {
-          setIsChatOpen(false);
-          setIsAuthOpen(true);
+          setIsAdvisorOpen(true);
         }}
       />
 
-      {/* Authentication & Advisor Modal */}
+      {/* Advisor Contact Modal (Llamada o WhatsApp) */}
+      <AdvisorModal
+        isOpen={isAdvisorOpen}
+        onClose={() => setIsAdvisorOpen(false)}
+      />
+
+      {/* Authentication Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}

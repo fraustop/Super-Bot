@@ -121,6 +121,14 @@ export async function askGemini(
 function fallbackKnowledgeEngine(query: string): { text: string; suggestAdvisor: boolean } {
   const q = query.toLowerCase().trim();
 
+  // Direct advisor request
+  if (q.includes('asesor') || q.includes('humano') || q.includes('hablar con') || q.includes('contacto') || q.includes('llamada') || q.includes('telefono') || q.includes('teléfono')) {
+    return {
+      text: '¡Con gusto te enlazo con nuestro equipo! Puedes elegir si prefieres recibir una llamada telefónica o un mensaje por WhatsApp.',
+      suggestAdvisor: true
+    };
+  }
+
   // Price or cost inquiries
   if (q.includes('precio') || q.includes('costo') || q.includes('cuanto cuesta') || q.includes('cuánto cuesta') || q.includes('tarifa')) {
     return {

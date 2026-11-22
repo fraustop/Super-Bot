@@ -140,6 +140,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   };
 
   const quickQuestions = [
+    'Hablar con un asesor',
     '¿Qué servicios ofrecen?',
     '¿Cómo funciona el bot de WhatsApp?',
     '¿Para qué sirve un formulario?',
@@ -259,7 +260,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                         onClick={onContactAdvisor || onClose}
                       >
                         <UserCheck size={16} />
-                        <span>Enlazarme con un asesor ahora</span>
+                        <span>Hablar con un asesor (Llamada o WhatsApp)</span>
                       </button>
                     </div>
                   )}

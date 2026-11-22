@@ -10,15 +10,22 @@ import {
   type User,
   type Auth
 } from 'firebase/auth';
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  serverTimestamp,
+  type Firestore
+} from 'firebase/firestore';
 
-// Firebase configuration from environment variables or sensible defaults
+// Live Firebase configuration for project super-bot-cic
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'super-bot.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'super-bot',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'super-bot.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyBRXJRVdM3O6RNXtPKGJi8J3kPYtFBSouY',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'super-bot-cic.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'super-bot-cic',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'super-bot-cic.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '143781160080',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:143781160080:web:13ebd4717cbfda68a9e415'
 };
 
 export const isFirebaseConfigured = Boolean(
@@ -27,12 +34,14 @@ export const isFirebaseConfigured = Boolean(
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
+let db: Firestore | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
 
 if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     auth = getAuth(app);
+    db = getFirestore(app);
     googleProvider = new GoogleAuthProvider();
     googleProvider.setCustomParameters({ prompt: 'select_account' });
   } catch (error) {
@@ -40,13 +49,56 @@ if (isFirebaseConfigured) {
   }
 }
 
-export { auth, googleProvider };
+export { auth, db, googleProvider };
 
+// ============================================================================
+// Advisor Request Document Storage
+// ============================================================================
+export interface AdvisorRequest {
+  preference: 'call' | 'whatsapp';
+  phone: string;
+  name?: string;
+  notes?: string;
+  status: 'pending' | 'contacted' | 'closed';
+  source: string;
+  createdAt?: any;
+  dateString?: string;
+}
+
+export async function saveAdvisorRequest(
+  data: Omit<AdvisorRequest, 'status' | 'source' | 'createdAt' | 'dateString'>
+): Promise<{ id?: string; error?: string }> {
+  if (!db) {
+    return { error: 'La base de datos de Firebase no está disponible en este momento.' };
+  }
+
+  try {
+    const docData: AdvisorRequest = {
+      preference: data.preference,
+      phone: data.phone.trim(),
+      name: data.name?.trim() || '',
+      notes: data.notes || '',
+      status: 'pending',
+      source: 'superbot_web',
+      createdAt: serverTimestamp(),
+      dateString: new Date().toISOString()
+    };
+
+    const docRef = await addDoc(collection(db, 'advisor_requests'), docData);
+    return { id: docRef.id };
+  } catch (err: any) {
+    console.error('Error saving advisor request to Firestore:', err);
+    return { error: err.message || 'Error al registrar la solicitud en Firebase' };
+  }
+}
+
+// ============================================================================
 // Authentication Helpers
+// ============================================================================
 export async function loginWithGoogle(): Promise<{ user?: User; error?: string }> {
   if (!isFirebaseConfigured || !auth || !googleProvider) {
     return {
-      error: 'Firebase aún no está configurado con las credenciales de tu proyecto. Revisa el archivo .env.local'
+      error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
     };
   }
 
@@ -62,7 +114,7 @@ export async function loginWithGoogle(): Promise<{ user?: User; error?: string }
 export async function loginWithEmail(email: string, password: string): Promise<{ user?: User; error?: string }> {
   if (!isFirebaseConfigured || !auth) {
     return {
-      error: 'Firebase aún no está configurado con las credenciales de tu proyecto. Revisa el archivo .env.local'
+      error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
     };
   }
 
@@ -84,7 +136,7 @@ export async function loginWithEmail(email: string, password: string): Promise<{
 export async function registerWithEmail(email: string, password: string): Promise<{ user?: User; error?: string }> {
   if (!isFirebaseConfigured || !auth) {
     return {
-      error: 'Firebase aún no está configurado con las credenciales de tu proyecto. Revisa el archivo .env.local'
+      error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
     };
   }
 
