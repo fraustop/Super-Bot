@@ -26,8 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
               src="/bot-icon.png"
               alt="SuperBot"
               className="bot-avatar-img"
-              width={48}
-              height={48}
+              width={68}
+              height={68}
             />
             <span className="bot-status-indicator" title="En línea"></span>
           </div>
