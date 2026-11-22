@@ -3,17 +3,13 @@ import {
   X,
   Send,
   RotateCcw,
-  Key,
   UserCheck,
   Bot,
   User,
-  Sparkles,
-  Check
+  Sparkles
 } from 'lucide-react';
 import {
   askGemini,
-  getGeminiApiKey,
-  saveGeminiApiKey,
   type ChatMessage
 } from '../services/gemini';
 
@@ -38,9 +34,6 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [keySavedMessage, setKeySavedMessage] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,10 +66,6 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
     };
     window.addEventListener('superbot-focus-chat', handleFocus);
     return () => window.removeEventListener('superbot-focus-chat', handleFocus);
-  }, []);
-
-  useEffect(() => {
-    setApiKeyInput(getGeminiApiKey());
   }, []);
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -129,18 +118,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
     ]);
   };
 
-  const handleSaveApiKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveGeminiApiKey(apiKeyInput);
-    setKeySavedMessage(true);
-    setTimeout(() => {
-      setKeySavedMessage(false);
-      setShowKeyModal(false);
-    }, 1200);
-  };
-
   const quickQuestions = [
-    'Hablar con un asesor',
     '¿Qué servicios ofrecen?',
     '¿Cómo funciona el bot de WhatsApp?',
     '¿Para qué sirve un formulario?',
@@ -176,15 +154,6 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             <button
               type="button"
               className="chat-header-btn"
-              onClick={() => setShowKeyModal(!showKeyModal)}
-              title="Configurar Gemini API Key"
-              aria-label="Configurar clave API"
-            >
-              <Key size={17} />
-            </button>
-            <button
-              type="button"
-              className="chat-header-btn"
               onClick={handleClearChat}
               title="Reiniciar chat"
               aria-label="Reiniciar chat"
@@ -202,37 +171,6 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             </button>
           </div>
         </div>
-
-        {/* API Key Modal Drawer */}
-        {showKeyModal && (
-          <div className="api-key-banner">
-            <div className="api-key-banner-header">
-              <span className="api-key-title">Clave de Gemini API (Opcional)</span>
-              <button
-                type="button"
-                className="btn-text-close"
-                onClick={() => setShowKeyModal(false)}
-              >
-                &times;
-              </button>
-            </div>
-            <p className="api-key-desc">
-              Puedes ingresar tu API Key de Google AI Studio para usar Gemini en vivo, o dejarlo vacío para usar el motor con contexto local.
-            </p>
-            <form onSubmit={handleSaveApiKey} className="api-key-form">
-              <input
-                type="password"
-                placeholder="AIzaSy..."
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                className="api-key-input"
-              />
-              <button type="submit" className="btn-save-key">
-                {keySavedMessage ? <Check size={16} /> : 'Guardar'}
-              </button>
-            </form>
-          </div>
-        )}
 
         {/* Message Stream */}
         <div className="chat-messages-container">

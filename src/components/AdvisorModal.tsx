@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ArrowLeft,
   Loader2,
-  ExternalLink,
   ShieldCheck,
   UserCheck
 } from 'lucide-react';
@@ -192,21 +191,6 @@ export const AdvisorModal: React.FC<AdvisorModalProps> = ({
                 <ShieldCheck size={16} />
                 <span>Registrado en Firebase y notificado al asesor en tiempo real</span>
               </div>
-
-              {submittedData.preference === 'whatsapp' && (
-                <a
-                  href={`https://wa.me/528146018110?text=${encodeURIComponent(
-                    `Hola, solicité atención por WhatsApp en SuperBot para mi número ${submittedData.phone}.`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-open-wa-direct"
-                >
-                  <MessageSquare size={18} />
-                  <span>Abrir WhatsApp con el Asesor ahora</span>
-                  <ExternalLink size={14} />
-                </a>
-              )}
 
               <button
                 type="button"
