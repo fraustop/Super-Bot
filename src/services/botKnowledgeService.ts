@@ -434,7 +434,7 @@ export const DEFAULT_BOT_KNOWLEDGE: BotKnowledgeConfig = {
   updatedBy: 'system'
 };
 
-const STORAGE_KEY = 'superbot_cached_knowledge_v5';
+const STORAGE_KEY = 'superbot_cached_knowledge_v6';
 const KNOWLEDGE_DOC_PATH = { collection: 'bot_knowledge', docId: 'active_config' };
 
 // Active local subscribers to bot knowledge
@@ -453,23 +453,23 @@ function notifyKnowledgeSubscribers(conf: BotKnowledgeConfig) {
 // In-memory active configuration
 let currentActiveConfig: BotKnowledgeConfig = (() => {
   try {
-    const cached = localStorage.getItem(STORAGE_KEY);
+    const cached = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
     if (cached) {
       const parsed = JSON.parse(cached);
-      return {
-        ...DEFAULT_BOT_KNOWLEDGE,
-        ...parsed,
-        knowledgeBlocks: Array.isArray(parsed.knowledgeBlocks)
-          ? parsed.knowledgeBlocks
-          : []
-      };
+      if (Array.isArray(parsed.knowledgeBlocks) && parsed.knowledgeBlocks.length > 0) {
+        return {
+          ...DEFAULT_BOT_KNOWLEDGE,
+          ...parsed,
+          knowledgeBlocks: parsed.knowledgeBlocks
+        };
+      }
     }
   } catch {
     // ignore
   }
   return {
     ...DEFAULT_BOT_KNOWLEDGE,
-    knowledgeBlocks: []
+    knowledgeBlocks: [...DEFAULT_KNOWLEDGE_BLOCKS]
   };
 })();
 
@@ -512,10 +512,9 @@ export function subscribeToBotKnowledge(
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as Partial<BotKnowledgeConfig>;
-          // CRITICAL: Respect explicit empty array [] from Firestore when items are deleted!
-          // Only fallback to default sample blocks if knowledgeBlocks is completely undefined in Firestore.
-          const firestoreBlocks = Array.isArray(data.knowledgeBlocks)
-            ? data.knowledgeBlocks
+          const hasBlocks = Array.isArray(data.knowledgeBlocks) && data.knowledgeBlocks.length > 0;
+          const firestoreBlocks = hasBlocks
+            ? data.knowledgeBlocks!
             : DEFAULT_KNOWLEDGE_BLOCKS;
 
           currentActiveConfig = {
@@ -534,6 +533,10 @@ export function subscribeToBotKnowledge(
             // ignore
           }
           notifyKnowledgeSubscribers(currentActiveConfig);
+
+          if (!hasBlocks) {
+            saveBotKnowledgeToFirestore(currentActiveConfig, 'auto-seed');
+          }
         } else {
           saveBotKnowledgeToFirestore(DEFAULT_BOT_KNOWLEDGE, 'init');
         }
@@ -656,16 +659,19 @@ export async function addOrUpdateKnowledgeBlock(
   userEmail: string
 ): Promise<{ success: boolean; block: BotKnowledgeBlock; error?: string }> {
   const now = new Date().toISOString();
-  const existingIndex = currentActiveConfig.knowledgeBlocks.findIndex(b => b.id === blockData.id);
+  const baseBlocks = Array.isArray(currentActiveConfig.knowledgeBlocks) && currentActiveConfig.knowledgeBlocks.length > 0
+    ? currentActiveConfig.knowledgeBlocks
+    : DEFAULT_KNOWLEDGE_BLOCKS;
+  const existingIndex = baseBlocks.findIndex(b => b.id === blockData.id);
 
   const finalBlock: BotKnowledgeBlock = {
     ...blockData,
-    createdAt: blockData.createdAt || (existingIndex >= 0 ? currentActiveConfig.knowledgeBlocks[existingIndex].createdAt : now),
+    createdAt: blockData.createdAt || (existingIndex >= 0 ? baseBlocks[existingIndex].createdAt : now),
     updatedAt: now,
     authorEmail: userEmail
   };
 
-  const newBlocks = [...currentActiveConfig.knowledgeBlocks];
+  const newBlocks = [...baseBlocks];
   if (existingIndex >= 0) {
     newBlocks[existingIndex] = finalBlock;
   } else {
@@ -733,9 +739,9 @@ export async function deleteKnowledgeBlock(
   blockId: string,
   userEmail: string
 ): Promise<{ success: boolean; error?: string }> {
-  const currentList = Array.isArray(currentActiveConfig.knowledgeBlocks)
+  const currentList = Array.isArray(currentActiveConfig.knowledgeBlocks) && currentActiveConfig.knowledgeBlocks.length > 0
     ? currentActiveConfig.knowledgeBlocks
-    : [];
+    : DEFAULT_KNOWLEDGE_BLOCKS;
   const filtered = currentList.filter(b => b.id !== blockId);
   const updatedConfig: BotKnowledgeConfig = {
     ...currentActiveConfig,
@@ -765,9 +771,9 @@ export async function deleteBlocksByCategory(
   category: 'product' | 'service' | 'instruction',
   userEmail: string
 ): Promise<{ success: boolean; error?: string }> {
-  const currentList = Array.isArray(currentActiveConfig.knowledgeBlocks)
+  const currentList = Array.isArray(currentActiveConfig.knowledgeBlocks) && currentActiveConfig.knowledgeBlocks.length > 0
     ? currentActiveConfig.knowledgeBlocks
-    : [];
+    : DEFAULT_KNOWLEDGE_BLOCKS;
 
   let filtered: BotKnowledgeBlock[];
   if (category === 'product') {
