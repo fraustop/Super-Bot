@@ -18,21 +18,28 @@ REGLAS FUNDAMENTALES Y OBLIGATORIAS:
 4. No des costos o precios fijos inventados. Explica que son soluciones a costo muy accesible y adaptadas a la medida de cada emprendimiento, e invita a solicitar cotización con un asesor.
 
 NUESTRO CATÁLOGO DE SERVICIOS:
-1. FORMULARIOS INTELIGENTES:
+1. PÁGINAS WEB PROFESIONALES:
+   - Para qué sirve: Tu negocio visible y vendiendo en internet con sitios web modernos, rápidos y optimizados para celulares que transmiten confianza y convierten visitas en clientes.
+   - Utilidades para negocios:
+     * Presencia digital de alto impacto: destaca frente a la competencia con diseño moderno a la medida.
+     * Diseñada para convertir y vender: botones directos a WhatsApp, cotizadores y formularios de contacto.
+     * Velocidad ultra rápida y optimizada: carga instantánea en celulares y código limpio para posicionarte en Google.
+
+2. FORMULARIOS INTELIGENTES:
    - Para qué sirve: Digitaliza la recepción de solicitudes, cotizaciones y pedidos en una interfaz rápida, intuitiva y accesible para tu emprendimiento.
    - Utilidades para negocios:
      * Recepción 24/7 sin esperas: los clientes cotizan o envían pedidos en cualquier momento sin perder la venta.
      * Cero errores de captura: la información se valida en tiempo real y se envía directo a tu base de datos, correo o Google Sheets.
      * Sin software costoso: solución directa a la medida que reemplaza procesos en papel o chats desordenados.
 
-2. APLICACIONES OPERATIVAS:
+3. APLICACIONES OPERATIVAS:
    - Para qué sirve: Herramientas sencillas para gestionar ventas en mostrador, inventarios de productos y pedidos diarios sin sistemas complicados.
    - Utilidades para negocios:
      * Inventario y stock al instante: visibilidad en tiempo real de existencias con alertas de reabastecimiento.
      * Punto de venta (POS) ágil: registro rápido de cobros, métodos de pago y comandas en pocos segundos.
      * Métricas claras y útiles: panel para revisar ventas del día y productos más solicitados desde cualquier celular o PC.
 
-3. BOTS DE ATENCIÓN MULTICANAL (Web, WhatsApp y Telegram):
+4. BOTS DE ATENCIÓN MULTICANAL (Web, WhatsApp y Telegram):
    - Para qué sirve: Un asistente inteligente que atiende las dudas de tus prospectos en los canales donde ya se comunican y no deja escapar ninguna venta.
    - Utilidades para negocios:
      * Atención en WhatsApp, Telegram y chat Web 24/7.
@@ -132,8 +139,16 @@ function fallbackKnowledgeEngine(query: string): { text: string; suggestAdvisor:
   // Price or cost inquiries
   if (q.includes('precio') || q.includes('costo') || q.includes('cuanto cuesta') || q.includes('cuánto cuesta') || q.includes('tarifa')) {
     return {
-      text: 'Nuestras soluciones (formularios, aplicaciones operativas y bots) se adaptan a la medida de tu negocio con costos sumamente accesibles para emprendimientos y PyMEs. No manejamos costos fijos rígidos, ¿quieres que te enlace con un asesor para darte una cotización a tu medida?',
+      text: 'Nuestras soluciones (páginas web, formularios, aplicaciones operativas y bots) se adaptan a la medida de tu negocio con costos sumamente accesibles para emprendimientos y PyMEs. No manejamos costos fijos rígidos, ¿quieres que te enlace con un asesor para darte una cotización a tu medida?',
       suggestAdvisor: true
+    };
+  }
+
+  // Web pages inquiries
+  if (q.includes('web') || q.includes('pagina') || q.includes('página') || q.includes('sitio') || q.includes('landing') || q.includes('portal')) {
+    return {
+      text: 'Diseñamos Páginas Web profesionales, rápidas y optimizadas para celulares. Cuentan con diseño a la medida que destaca tu negocio frente a la competencia, botones directos a WhatsApp, cotizadores y formularios para convertir visitantes en clientes reales.',
+      suggestAdvisor: false
     };
   }
 
@@ -164,7 +179,7 @@ function fallbackKnowledgeEngine(query: string): { text: string; suggestAdvisor:
   // General services question
   if (q.includes('que hacen') || q.includes('qué hacen') || q.includes('que ofrecen') || q.includes('qué ofrecen') || q.includes('servicios') || q.includes('hola') || q.includes('saludos')) {
     return {
-      text: '¡Hola! En SuperBot ofrecemos 3 soluciones accesibles para pequeños negocios y emprendimientos:\n1. 📋 Formularios Inteligentes para pedidos y cotizaciones 24/7.\n2. 📱 Aplicaciones Operativas para punto de venta, inventario y métricas.\n3. 🤖 Bots de Atención en WhatsApp, Telegram y Web para resolver dudas frecuentes y capturar ventas.',
+      text: '¡Hola! En SuperBot ofrecemos 4 soluciones accesibles para pequeños negocios y emprendimientos:\n1. 🌐 Páginas Web Profesionales y vendedoras.\n2. 📋 Formularios Inteligentes para pedidos y cotizaciones 24/7.\n3. 📱 Aplicaciones Operativas para punto de venta, inventario y métricas.\n4. 🤖 Bots de Atención en WhatsApp, Telegram y Web para resolver dudas frecuentes y capturar ventas.',
       suggestAdvisor: false
     };
   }

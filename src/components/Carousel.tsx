@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
+  Globe,
   FileText,
   LayoutDashboard,
   Bot,
@@ -27,6 +28,30 @@ interface SlideData {
 const slides: SlideData[] = [
   {
     id: 1,
+    tag: 'Páginas Web Profesionales',
+    badgeIcon: <Globe size={16} />,
+    title: 'Tu Negocio en Internet con una Web Moderna y Vendedora',
+    subtitle:
+      'Diseñamos páginas web profesionales, rápidas y adaptadas a celulares que transmiten confianza inmediata, posicionan tu marca y convierten visitas en clientes.',
+    image: '/carousel-websites.jpg',
+    imageAlt: 'Página web profesional y responsiva para negocios y PyMEs',
+    utilities: [
+      {
+        title: 'Presencia digital de alto impacto',
+        desc: 'Destaca frente a tus competidores con un diseño a la medida, confiable y accesible desde cualquier dispositivo.'
+      },
+      {
+        title: 'Diseñada para convertir y vender',
+        desc: 'Estructura clara con botones directos a WhatsApp, cotizadores y llamadas a la acción sin rodeos.'
+      },
+      {
+        title: 'Velocidad ultra rápida y optimizada',
+        desc: 'Carga instantánea con código ágil y moderno para que tus clientes locales te encuentren sin demoras.'
+      }
+    ]
+  },
+  {
+    id: 2,
     tag: 'Formularios Inteligentes',
     badgeIcon: <FileText size={16} />,
     title: 'Captura de Pedidos y Clientes sin Complicaciones',
@@ -50,7 +75,7 @@ const slides: SlideData[] = [
     ]
   },
   {
-    id: 2,
+    id: 3,
     tag: 'Aplicaciones Operativas',
     badgeIcon: <LayoutDashboard size={16} />,
     title: 'El Control Diario de tu Negocio en tu Mano',
@@ -74,7 +99,7 @@ const slides: SlideData[] = [
     ]
   },
   {
-    id: 3,
+    id: 4,
     tag: 'Bots de Atención (Web, WhatsApp y Telegram)',
     badgeIcon: <Bot size={16} />,
     title: 'Respuestas Instantáneas y Cierre de Ventas',
@@ -223,6 +248,26 @@ export const Carousel: React.FC<CarouselProps> = ({ onOpenContact, isChatOpen = 
                     </div>
                   </div>
                 </div>
+
+                {/* Floating Bot Chat Launcher inside active card, over the container (labels removed) */}
+                {idx === currentIndex && (
+                  <button
+                    type="button"
+                    className="card-chat-launcher"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onOpenContact) onOpenContact();
+                      window.dispatchEvent(new CustomEvent('superbot-focus-chat'));
+                    }}
+                    aria-label="Abrir chat con Super-Bot"
+                    title="Pregúntale a Super-Bot"
+                  >
+                    <div className="card-launcher-icon-wrap">
+                      <img src="/bot-icon.png" alt="Super-Bot" className="card-launcher-bot-img" />
+                      <span className="card-launcher-online-dot"></span>
+                    </div>
+                  </button>
+                )}
               </div>
             ))}
           </div>

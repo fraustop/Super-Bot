@@ -688,6 +688,7 @@ html, body {
 }
 
 .carousel-slide-card {
+  position: relative;
   min-width: 100%;
   max-width: 100%;
   flex-shrink: 0;
@@ -1036,44 +1037,64 @@ html, body {
 }
 
 /* ==========================================================================
-   Floating Chat Launcher Button
+   Card Chat Launcher Button (Overlaid on active card, labels removed)
    ========================================================================== */
-.floating-chat-launcher {
-  position: fixed;
-  bottom: 1.85rem;
-  right: 1.85rem;
-  z-index: 80;
+.card-chat-launcher {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 30;
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 1.15rem 0.55rem 0.65rem;
-  border-radius: 9999px;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
   background: var(--header-metallic-bg);
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
   box-shadow: 
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 16px var(--accent-cyan-glow);
-  color: #ffffff;
+    0 10px 26px rgba(0, 0, 0, 0.55),
+    0 0 18px var(--accent-cyan-glow);
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-family: inherit;
+  padding: 0;
+  transition: all 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cardBotPulse 3s ease-in-out infinite;
 }
 
-.floating-chat-launcher:hover {
-  transform: translateY(-3px) scale(1.03);
+@keyframes cardBotPulse {
+  0%, 100% {
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 10px 26px rgba(0, 0, 0, 0.55),
+      0 0 18px var(--accent-cyan-glow);
+  }
+  50% {
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 12px 30px rgba(0, 0, 0, 0.65),
+      0 0 28px rgba(56, 189, 248, 0.65);
+  }
+}
+
+.card-chat-launcher:hover {
+  transform: translateY(-3px) scale(1.08);
+  border-color: rgba(56, 189, 248, 0.85);
   box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 12px 30px rgba(0, 0, 0, 0.6),
-    0 0 24px var(--accent-cyan-glow);
-  border-color: rgba(56, 189, 248, 0.5);
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 14px 34px rgba(0, 0, 0, 0.7),
+    0 0 30px var(--accent-cyan-glow);
 }
 
-.launcher-icon-wrap {
+.card-chat-launcher:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.card-launcher-icon-wrap {
   position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   overflow: visible;
   background: #1f242d;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1082,34 +1103,35 @@ html, body {
   justify-content: center;
 }
 
-.launcher-bot-img {
+.card-launcher-bot-img {
   width: 100%;
   height: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   object-fit: cover;
 }
 
-.launcher-online-dot {
+.card-launcher-online-dot {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 10px;
-  height: 10px;
+  top: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background-color: var(--status-online);
   border: 2px solid #16191f;
-  box-shadow: 0 0 6px var(--status-online);
+  box-shadow: 0 0 8px var(--status-online);
+  animation: onlineBlink 2s ease-in-out infinite;
 }
 
-.launcher-label {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.01em;
-}
-
-.launcher-bubble-icon {
-  color: var(--accent-cyan);
+@keyframes onlineBlink {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.85;
+  }
 }
 
 /* ==========================================================================
@@ -1602,14 +1624,16 @@ html, body {
     max-width: 100%;
   }
 
-  .floating-chat-launcher {
+  .card-chat-launcher {
     bottom: 1rem;
     right: 1rem;
-    padding: 0.45rem 0.95rem 0.45rem 0.55rem;
+    width: 50px;
+    height: 50px;
   }
 
-  .launcher-label {
-    display: none;
+  .card-launcher-icon-wrap {
+    width: 38px;
+    height: 38px;
   }
 }
 
@@ -1712,6 +1736,18 @@ html, body {
   .compact-container .indicator-dot {
     padding: 0.45rem 0.85rem;
     font-size: 0.78rem;
+  }
+
+  .compact-container .card-chat-launcher {
+    bottom: 1rem;
+    right: 1rem;
+    width: 48px;
+    height: 48px;
+  }
+
+  .compact-container .card-launcher-icon-wrap {
+    width: 36px;
+    height: 36px;
   }
 }
 

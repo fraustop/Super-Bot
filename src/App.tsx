@@ -5,7 +5,6 @@ import { ChatDrawer } from './components/ChatDrawer';
 import { AuthModal } from './components/AuthModal';
 import { AdvisorModal } from './components/AdvisorModal';
 import { subscribeToAuth, logoutUser } from './firebase/config';
-import { MessageSquareText } from 'lucide-react';
 import type { User } from 'firebase/auth';
 
 export const App: React.FC = () => {
@@ -67,24 +66,6 @@ export const App: React.FC = () => {
           isChatOpen={isChatOpen}
         />
       </main>
-
-      {/* Floating Chat Launcher (visible when chat is closed) */}
-      {!isChatOpen && (
-        <button
-          type="button"
-          className="floating-chat-launcher"
-          onClick={() => setIsChatOpen(true)}
-          aria-label="Abrir chat con Super-Bot"
-          title="Pregúntale a Super-Bot"
-        >
-          <div className="launcher-icon-wrap">
-            <img src="/bot-icon.png" alt="Super-Bot" className="launcher-bot-img" />
-            <span className="launcher-online-dot"></span>
-          </div>
-          <span className="launcher-label">¿Dudas? Pregúntale a Super-Bot</span>
-          <MessageSquareText size={18} className="launcher-bubble-icon" />
-        </button>
-      )}
 
       {/* Right Side Chat Drawer */}
       <ChatDrawer
