@@ -110,6 +110,8 @@ export const App: React.FC = () => {
           onLogout={handleLogout}
           onViewPublicSite={() => setAdminViewMode('public')}
           onOpenChat={() => setIsChatOpen(true)}
+          theme={theme}
+          onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
         />
       ) : isRegularClient && clientViewMode === 'portal' ? (
         /* 2. REGULAR CLIENT (Any other account -> Left panel "Mis productos") */

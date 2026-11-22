@@ -23,7 +23,14 @@ import {
   X,
   Plus,
   Save,
-  RotateCcw
+  RotateCcw,
+  Sun,
+  Moon,
+  Bold,
+  Italic,
+  Heading2,
+  List,
+  Code
 } from 'lucide-react';
 import {
   type BotKnowledgeConfig,
@@ -46,13 +53,17 @@ interface AdminViewProps {
   onLogout: () => void;
   onViewPublicSite: () => void;
   onOpenChat: () => void;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
   currentUser,
   onLogout,
   onViewPublicSite,
-  onOpenChat
+  onOpenChat,
+  theme = 'dark',
+  onToggleTheme
 }) => {
   const [config, setConfig] = useState<BotKnowledgeConfig>(DEFAULT_BOT_KNOWLEDGE);
   const [activeTab, setActiveTab] = useState<'trainer' | 'products' | 'services' | 'instructions' | 'pricing' | 'raw'>('trainer');
@@ -61,13 +72,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // Manual Block Editing Modal State
   const [editingBlock, setEditingBlock] = useState<BotKnowledgeBlock | null>(null);
   const [isNewManualBlock, setIsNewManualBlock] = useState<boolean>(false);
+  const [promptViewMode, setPromptViewMode] = useState<'edit' | 'preview'>('edit');
 
   // Interactive Trainer Chat
   const [chatMessages, setChatMessages] = useState<TrainerChatMessage[]>([
     {
       id: 'init-msg',
       sender: 'trainer',
-      text: '¡Hola! Soy tu **Bot Entrenador**.\n\nPuedo ayudarte a crear y configurar tres tipos de objetos maestros para el Bot Asesor:\n1. 📦 **Productos**: Software empaquetado y licencias de pago único.\n2. 🛠️ **Servicios**: Rentas mensuales de bots, pólizas de mantenimiento e infraestructura cloud.\n3. 🧠 **Instrucciones al Bot**: Reglas de lenguaje, consignas de venta, redirecciones y cotizaciones.\n\nTambién puedes **modificar cualquier objeto manualmente** usando el botón "Editar" en sus respectivas pestañas mientras seguimos afinando el entrenador.',
+      text: '¡Hola! Soy tu **Bot Entrenador**.\n\nPuedo ayudarte a crear y configurar tres tipos de objetos maestros para el Bot Asesor:\n1. 📦 **Productos**: Software empaquetado y licencias de pago único.\n2. 🛠️ **Servicios**: Rentas mensuales de bots, pólizas de mantenimiento e infraestructura cloud.\n3. 🧠 **Instrucciones al Bot**: Reglas de lenguaje, consignas de venta, redirecciones y cotizaciones.\n\nTambién puedes **modificar cualquier objeto manualmente** usando el botón "Editar" en sus respectivas pestañas con panel de detalles a la izquierda (25%) y el prompt con markdown a la derecha (75%).',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -106,7 +118,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (b.category === 'instruction') {
       const ruleType = b.structuredData?.ruleType || 'Directriz de Asesor';
       const advice = b.structuredData?.advisorInstructions || b.summary || 'Cumplir en toda interacción comercial';
-      return `INSTRUCCIÓN AL ASESOR - ${b.title.toUpperCase()}:\n- Tipo de regla: ${ruleType}\n- Directriz oficial: ${advice}\n- Consigna: Aplicar estrictamente en las interacciones y respuestas del Bot Asesor comercial.`;
+      return `### INSTRUCCIÓN OBLIGATORIA AL ASESOR: ${b.title.toUpperCase()}\n\n- **Tipo de directriz:** ${ruleType}\n- **Directriz oficial:** ${advice}\n- **Regla estricta:** Aplicar de forma obligatoria en todas las respuestas y cotizaciones comerciales del Bot Asesor comercial Super-Bot.`;
     }
     if (b.category === 'service') {
       const isMonthly = Boolean(b.structuredData?.monthlyPrice);
@@ -114,8 +126,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
       const freq = b.structuredData?.frequency || (isMonthly ? 'Mensual recurrente' : 'Por evento');
       const channels = b.structuredData?.channels || 'WhatsApp Cloud API y Web';
       const inc = b.structuredData?.includes || b.summary || 'Atención y soporte continuo';
-      const advice = b.structuredData?.advisorInstructions || 'Ofrecer a prospectos que buscan solución continua.';
-      return `SERVICIO - ${b.title.toUpperCase()}:\n- Tarifa: ${priceText} (${freq}).\n- Canales: ${channels}.\n- Cobertura: ${inc}\n- Consigna para el Asesor: ${advice}`;
+      const advice = b.structuredData?.advisorInstructions || 'Ofrecer a prospectos que buscan solución continua para su negocio.';
+      return `### SERVICIO OFICIAL: ${b.title.toUpperCase()}\n\n- **Tarifa oficial:** ${priceText} (${freq})\n- **Canales de operación:** ${channels}\n- **Alcance y cobertura:** ${inc}\n- **Consigna para el Asesor:** ${advice}`;
     }
     // Product
     const price = b.structuredData?.price || 300;
@@ -123,13 +135,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const inc = b.structuredData?.includes || b.summary || 'Entrega completa llave en mano';
     const addOns = b.structuredData?.additionalPackages || 'Póliza de ajustes posteriores por $100 MXN';
     const advice = b.structuredData?.advisorInstructions || 'Presentar como solución de entrada para iniciar a vender de inmediato.';
-    return `PRODUCTO - ${b.title.toUpperCase()}:\n- Precio base: $${price} MXN (pago único inicial).\n- Formato de entrega: ${format}.\n- Qué incluye: ${inc}\n- Paquetes complementarios: ${addOns}\n- Consigna para el Asesor: ${advice}`;
+    return `### PRODUCTO OFICIAL DEL CATÁLOGO: ${b.title.toUpperCase()}\n\n- **Costo base:** $${price} MXN (pago único inicial)\n- **Formato de entrega:** ${format}\n- **Qué incluye:** ${inc}\n- **Paquetes complementarios:** ${addOns}\n- **Consigna para el Asesor:** ${advice}`;
   };
 
   // Open modal to manually edit an existing block
   const handleOpenManualEdit = (block: BotKnowledgeBlock) => {
     setEditingBlock(JSON.parse(JSON.stringify(block)));
     setIsNewManualBlock(false);
+    setPromptViewMode('edit');
   };
 
   // Open modal to manually create a new block
@@ -160,6 +173,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     newBlock.content = generateContentFromBlock(newBlock);
     setEditingBlock(newBlock);
     setIsNewManualBlock(true);
+    setPromptViewMode('edit');
   };
 
   // Save manual block directly to Firestore
@@ -192,7 +206,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
       setSaveStatus({
         type: 'success',
-        message: `¡"${blockToSave.title}" guardado y sincronizado manualmente en Firestore en ${categoryLabel}!`
+        message: `¡"${blockToSave.title}" guardado y sincronizado en Firestore en ${categoryLabel}!`
       });
       setEditingBlock(null);
       setTimeout(() => setSaveStatus(null), 5000);
@@ -202,6 +216,80 @@ export const AdminView: React.FC<AdminViewProps> = ({
         message: res.error || 'Error al guardar manualmente en Firestore.'
       });
     }
+  };
+
+  // Helper to insert markdown tags at cursor position
+  const handleInsertMarkdownTag = (prefix: string, suffix: string = '') => {
+    const textarea = document.getElementById('modal-prompt-textarea') as HTMLTextAreaElement | null;
+    if (!textarea || !editingBlock) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const current = editingBlock.content || '';
+    const selected = current.substring(start, end);
+    const replacement = selected ? `${prefix}${selected}${suffix}` : `${prefix}texto${suffix}`;
+    const newContent = current.substring(0, start) + replacement + current.substring(end);
+    setEditingBlock({ ...editingBlock, content: newContent });
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected ? selected.length : 5));
+    }, 50);
+  };
+
+  // Render formatted markdown preview
+  const renderInlineMarkdown = (line: string): React.ReactNode[] => {
+    const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="md-bold">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return <em key={i} className="md-italic">{part.slice(1, -1)}</em>;
+      }
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return <code key={i} className="md-code">{part.slice(1, -1)}</code>;
+      }
+      return part;
+    });
+  };
+
+  const renderMarkdownPreview = (text: string, category: string) => {
+    const lines = (text || '').split('\n');
+    return (
+      <div className={`markdown-preview-container ${category}`}>
+        {lines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return <div key={idx} className="md-spacer" />;
+          }
+          if (trimmed.startsWith('### ')) {
+            return <h4 key={idx} className="md-h3">{renderInlineMarkdown(trimmed.replace(/^###\s*/, ''))}</h4>;
+          }
+          if (trimmed.startsWith('## ')) {
+            return <h3 key={idx} className="md-h2">{renderInlineMarkdown(trimmed.replace(/^##\s*/, ''))}</h3>;
+          }
+          if (trimmed.startsWith('# ')) {
+            return <h2 key={idx} className="md-h1">{renderInlineMarkdown(trimmed.replace(/^#\s*/, ''))}</h2>;
+          }
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+            const itemText = trimmed.replace(/^[-*•]\s*/, '');
+            return (
+              <div key={idx} className="md-list-item">
+                <span className="md-bullet">•</span>
+                <div className="md-list-content">{renderInlineMarkdown(itemText)}</div>
+              </div>
+            );
+          }
+          if (trimmed.startsWith('> ')) {
+            return (
+              <blockquote key={idx} className="md-blockquote">
+                {renderInlineMarkdown(trimmed.replace(/^>\s*/, ''))}
+              </blockquote>
+            );
+          }
+          return <p key={idx} className="md-paragraph">{renderInlineMarkdown(trimmed)}</p>;
+        })}
+      </div>
+    );
   };
 
   // Send message to Trainer Bot
@@ -271,7 +359,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
       setSaveStatus({
         type: 'success',
-        message: `¡"${blockToUpload.title}" confirmado y sincronizado con Firestore en la pestaña de ${categoryLabel}!`
+        message: `¡"${blockToUpload.title}" confirmado y sincronizado con Firestore en ${categoryLabel}!`
       });
 
       // Add confirmation message to chat
@@ -280,7 +368,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         {
           id: `confirmed-${Date.now()}`,
           sender: 'trainer',
-          text: `🎉 **¡Bloque confirmado y subido con éxito a Firestore!**\n\nEl objeto **"${blockToUpload.title}"** ya forma parte de los documentos maestros en la pestaña de **${categoryLabel}**. El Bot Asesor comercial ya lo tiene incorporado en sus respuestas y cotizaciones en vivo.`,
+          text: `🎉 **¡Bloque confirmado y subido con éxito a Firestore!**\n\nEl objeto **"${blockToUpload.title}"** ya forma parte de los documentos maestros en **${categoryLabel}**. El Bot Asesor comercial ya lo tiene incorporado en sus respuestas y cotizaciones en vivo.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -355,11 +443,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   return (
     <div className="admin-dashboard-container">
-      {/* Top Banner / Navigation */}
+      {/* Top Banner / High-Contrast Navigation Header */}
       <header className="admin-header-bar">
         <div className="admin-header-brand">
           <div className="admin-badge-icon">
-            <ShieldCheck size={22} className="text-emerald-400" />
+            <ShieldCheck size={24} className="text-emerald-400" />
           </div>
           <div>
             <div className="admin-title-row">
@@ -373,6 +461,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
 
         <div className="admin-header-controls">
+          {onToggleTheme && (
+            <button
+              type="button"
+              className="btn-admin-theme"
+              onClick={onToggleTheme}
+              title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+            </button>
+          )}
           <button
             type="button"
             className="btn-admin-preview"
@@ -1489,57 +1588,87 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </div>
 
       {/* ===================================================================== */}
-      {/* MANUAL OBJECT EDIT / CREATE MODAL                                      */}
+      {/* MANUAL OBJECT EDIT / CREATE MODAL (25% Details Left | 75% Prompt Right) */}
       {/* ===================================================================== */}
       {editingBlock && (
         <div className="manual-edit-modal-backdrop" onClick={() => setEditingBlock(null)}>
           <div
-            className="manual-edit-modal"
+            className="manual-edit-modal split-view"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
             {/* Modal Header */}
             <div className="modal-header">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className={`modal-cat-icon-wrap ${editingBlock.category}`}>
                   {editingBlock.category === 'product' ? (
-                    <Package size={20} className="text-emerald-400" />
+                    <Package size={22} className="text-emerald-400" />
                   ) : editingBlock.category === 'service' ? (
-                    <Wrench size={20} className="text-cyan-400" />
+                    <Wrench size={22} className="text-cyan-400" />
                   ) : (
-                    <Brain size={20} className="text-purple-400" />
+                    <Brain size={22} className="text-purple-400" />
                   )}
                 </div>
                 <div>
-                  <h3 className="modal-title">
-                    {isNewManualBlock ? 'Crear Nuevo Objeto Manual' : 'Modificar Objeto Manualmente'}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="modal-title">
+                      {isNewManualBlock ? 'Crear Nuevo Objeto' : 'Modificar Objeto'}
+                    </h3>
+                    <span className={`modal-header-cat-pill ${editingBlock.category}`}>
+                      {editingBlock.category.toUpperCase()}
+                    </span>
+                  </div>
                   <p className="modal-subtitle">
-                    Edita directamente los datos que el Bot Asesor utiliza para responder y cotizar en Firestore.
+                    Configura los detalles en el panel izquierdo (25%) y edita o previsualiza el prompt con Markdown a la derecha (75%).
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn-modal-close"
-                onClick={() => setEditingBlock(null)}
-                title="Cerrar ventana"
-              >
-                <X size={18} />
-              </button>
+
+              <div className="flex items-center gap-3">
+                {/* Status Toggle */}
+                <button
+                  type="button"
+                  className={`btn-status-toggle ${editingBlock.status === 'active' ? 'active' : 'archived'}`}
+                  onClick={() => setEditingBlock({
+                    ...editingBlock,
+                    status: editingBlock.status === 'active' ? 'archived' : 'active'
+                  })}
+                  title="Cambiar estado del objeto para el asesor"
+                >
+                  <span className="status-indicator-dot"></span>
+                  <span>{editingBlock.status === 'active' ? 'Activo en Asesor' : 'Archivado'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-modal-close"
+                  onClick={() => setEditingBlock(null)}
+                  title="Cerrar ventana"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
-            {/* Modal Body / Form */}
-            <div className="modal-body">
-              {/* Category selector & status */}
-              <div className="modal-top-row">
-                <div className="category-switch-group">
-                  <span className="field-label">Categoría del Objeto:</span>
-                  <div className="category-switch-pills">
+            {/* Modal Body: Split Layout (25% Left | 75% Right) */}
+            <div className="modal-body-split">
+              {/* ----------------------------------------------------------- */}
+              {/* LEFT PANEL (~25% width): Structured Details                 */}
+              {/* ----------------------------------------------------------- */}
+              <aside className="modal-left-details-panel">
+                <div className="left-panel-header">
+                  <span className="panel-section-title">📋 Detalles del Objeto (25%)</span>
+                  <span className="text-xs text-muted">Datos para el sistema</span>
+                </div>
+
+                {/* Category Switcher Pills */}
+                <div className="left-field-group">
+                  <label className="field-label-compact">Categoría:</label>
+                  <div className="category-switch-pills-compact">
                     <button
                       type="button"
-                      className={`switch-pill ${editingBlock.category === 'product' ? 'active green' : ''}`}
+                      className={`switch-pill-compact ${editingBlock.category === 'product' ? 'active green' : ''}`}
                       onClick={() => {
                         const updated: BotKnowledgeBlock = {
                           ...editingBlock,
@@ -1554,12 +1683,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         setEditingBlock(updated);
                       }}
                     >
-                      <Package size={13} />
+                      <Package size={12} />
                       <span>Producto</span>
                     </button>
                     <button
                       type="button"
-                      className={`switch-pill ${editingBlock.category === 'service' ? 'active cyan' : ''}`}
+                      className={`switch-pill-compact ${editingBlock.category === 'service' ? 'active cyan' : ''}`}
                       onClick={() => {
                         const updated: BotKnowledgeBlock = {
                           ...editingBlock,
@@ -1575,12 +1704,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         setEditingBlock(updated);
                       }}
                     >
-                      <Wrench size={13} />
+                      <Wrench size={12} />
                       <span>Servicio</span>
                     </button>
                     <button
                       type="button"
-                      className={`switch-pill ${editingBlock.category === 'instruction' ? 'active purple' : ''}`}
+                      className={`switch-pill-compact ${editingBlock.category === 'instruction' ? 'active purple' : ''}`}
                       onClick={() => {
                         const updated: BotKnowledgeBlock = {
                           ...editingBlock,
@@ -1594,59 +1723,41 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         setEditingBlock(updated);
                       }}
                     >
-                      <Brain size={13} />
+                      <Brain size={12} />
                       <span>Instrucción</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="status-toggle-wrap">
-                  <span className="field-label">Estado en Asesor:</span>
-                  <button
-                    type="button"
-                    className={`btn-status-toggle ${editingBlock.status === 'active' ? 'active' : 'archived'}`}
-                    onClick={() => setEditingBlock({
-                      ...editingBlock,
-                      status: editingBlock.status === 'active' ? 'archived' : 'active'
-                    })}
-                  >
-                    <span className="status-indicator-dot"></span>
-                    <span>{editingBlock.status === 'active' ? 'Activo en Bot' : 'Archivado'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Title & Summary */}
-              <div className="form-grid-2">
-                <div className="form-field full">
-                  <label className="field-label">Título del Objeto (Visible en catálogo y asesor):</label>
+                {/* Title */}
+                <div className="left-field-group">
+                  <label className="field-label-compact">Nombre del Objeto:</label>
                   <input
                     type="text"
                     value={editingBlock.title}
                     onChange={(e) => setEditingBlock({ ...editingBlock, title: e.target.value })}
                     placeholder="Ej. Página Web Sencilla ($300 MXN)"
-                    className="field-input text-lg font-semibold"
+                    className="field-input-compact font-bold"
                   />
                 </div>
 
-                <div className="form-field full">
-                  <label className="field-label">Resumen corto (descripción de la tarjeta):</label>
-                  <input
-                    type="text"
+                {/* Short Summary */}
+                <div className="left-field-group">
+                  <label className="field-label-compact">Resumen corto (tarjeta):</label>
+                  <textarea
+                    rows={2}
                     value={editingBlock.summary}
                     onChange={(e) => setEditingBlock({ ...editingBlock, summary: e.target.value })}
-                    placeholder="Breve descripción del alcance del objeto"
-                    className="field-input"
+                    placeholder="Descripción resumida para el catálogo"
+                    className="field-textarea-compact"
                   />
                 </div>
-              </div>
 
-              {/* Category-Specific Form Fields */}
-              <div className="category-specific-fields-box">
+                {/* Specifics for PRODUCT */}
                 {editingBlock.category === 'product' && (
-                  <div className="form-grid-2">
-                    <div className="form-field">
-                      <label className="field-label">Precio Único ($ MXN):</label>
+                  <div className="category-compact-box green">
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Precio Único ($ MXN):</label>
                       <input
                         type="number"
                         value={editingBlock.structuredData?.price ?? 300}
@@ -1657,12 +1768,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             price: Number(e.target.value)
                           }
                         })}
-                        className="field-input"
+                        className="field-input-compact text-emerald-400 font-bold"
                       />
                     </div>
 
-                    <div className="form-field">
-                      <label className="field-label">Formato de Entrega / Instalación:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Formato de Entrega:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.deliveryFormat || ''}
@@ -1673,13 +1784,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             deliveryFormat: e.target.value
                           }
                         })}
-                        placeholder="Ej. Despliegue web inmediato, Instalación en 1 PC"
-                        className="field-input"
+                        placeholder="Ej. Despliegue web inmediato"
+                        className="field-input-compact"
                       />
                     </div>
 
-                    <div className="form-field full">
-                      <label className="field-label">Qué Incluye el Producto:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Qué Incluye:</label>
                       <textarea
                         rows={2}
                         value={editingBlock.structuredData?.includes || ''}
@@ -1690,13 +1801,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             includes: e.target.value
                           }
                         })}
-                        placeholder="Ej. 1 sección responsiva, hosting cloud SSL, botón directo a WhatsApp"
-                        className="field-textarea"
+                        placeholder="1 sección responsiva, SSL, botón WhatsApp"
+                        className="field-textarea-compact"
                       />
                     </div>
 
-                    <div className="form-field full">
-                      <label className="field-label">Paquetes Adicionales / Complementarios:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Paquetes Adicionales:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.additionalPackages || ''}
@@ -1707,13 +1818,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             additionalPackages: e.target.value
                           }
                         })}
-                        placeholder="Ej. Póliza de ajustes por $100 MXN c/u, Bot de atención por $1,000/mes"
-                        className="field-input"
+                        placeholder="Ajustes por $100 MXN c/u"
+                        className="field-input-compact"
                       />
                     </div>
 
-                    <div className="form-field full">
-                      <label className="field-label">Consigna / Instrucción de Venta para el Asesor:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Instrucción Asesor:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.advisorInstructions || ''}
@@ -1724,17 +1835,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             advisorInstructions: e.target.value
                           }
                         })}
-                        placeholder="Ej. Ofrecer como producto estrella de entrada para negocios que inician"
-                        className="field-input text-amber-300"
+                        placeholder="Presentar como solución accesible de entrada"
+                        className="field-input-compact text-amber-300"
                       />
                     </div>
                   </div>
                 )}
 
+                {/* Specifics for SERVICE */}
                 {editingBlock.category === 'service' && (
-                  <div className="form-grid-2">
-                    <div className="form-field">
-                      <label className="field-label">Renta Mensual Recurrente ($ MXN/mes):</label>
+                  <div className="category-compact-box cyan">
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Renta Mensual ($ MXN/mes):</label>
                       <input
                         type="number"
                         value={editingBlock.structuredData?.monthlyPrice ?? ''}
@@ -1746,12 +1858,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           }
                         })}
                         placeholder="Ej. 1000"
-                        className="field-input"
+                        className="field-input-compact text-cyan-400 font-bold"
                       />
                     </div>
 
-                    <div className="form-field">
-                      <label className="field-label">Tarifa por Ajuste / Evento ($ MXN):</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">O Costo por Ajuste ($ MXN):</label>
                       <input
                         type="number"
                         value={editingBlock.structuredData?.adjustmentPrice ?? ''}
@@ -1763,12 +1875,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           }
                         })}
                         placeholder="Ej. 100"
-                        className="field-input"
+                        className="field-input-compact text-amber-400 font-bold"
                       />
                     </div>
 
-                    <div className="form-field">
-                      <label className="field-label">Frecuencia:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Frecuencia:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.frequency || ''}
@@ -1779,13 +1891,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             frequency: e.target.value
                           }
                         })}
-                        placeholder="Ej. Mensual recurrente, Por evento / solicitud"
-                        className="field-input"
+                        placeholder="Ej. Mensual recurrente"
+                        className="field-input-compact"
                       />
                     </div>
 
-                    <div className="form-field">
-                      <label className="field-label">Canales de Operación:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Canales de Operación:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.channels || ''}
@@ -1796,13 +1908,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             channels: e.target.value
                           }
                         })}
-                        placeholder="Ej. WhatsApp Cloud API, Telegram, Sitio Web"
-                        className="field-input"
+                        placeholder="WhatsApp Cloud API, Telegram, Web"
+                        className="field-input-compact"
                       />
                     </div>
 
-                    <div className="form-field full">
-                      <label className="field-label">Alcance y Cobertura del Servicio:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Alcance / Cobertura:</label>
                       <textarea
                         rows={2}
                         value={editingBlock.structuredData?.includes || ''}
@@ -1813,13 +1925,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             includes: e.target.value
                           }
                         })}
-                        placeholder="Ej. Atención 24/7, filtro de clientes, cuota gratuita de 1,500 mensajes de IA diarios"
-                        className="field-textarea"
+                        placeholder="Atención 24/7, hasta 1,500 mensajes diarios gratis"
+                        className="field-textarea-compact"
                       />
                     </div>
 
-                    <div className="form-field full">
-                      <label className="field-label">Consigna Comercial para el Asesor:</label>
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Consigna Comercial Asesor:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.advisorInstructions || ''}
@@ -1830,17 +1942,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             advisorInstructions: e.target.value
                           }
                         })}
-                        placeholder="Ej. Presentar como la forma de no perder ningún cliente fuera de horario"
-                        className="field-input text-cyan-300"
+                        placeholder="Ofrecer a clientes que quieren no perder ventas"
+                        className="field-input-compact text-cyan-300"
                       />
                     </div>
                   </div>
                 )}
 
+                {/* Specifics for INSTRUCTION */}
                 {editingBlock.category === 'instruction' && (
-                  <div className="form-grid-2">
-                    <div className="form-field">
-                      <label className="field-label">Tipo de Directriz:</label>
+                  <div className="category-compact-box purple">
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Tipo de Directriz:</label>
                       <input
                         type="text"
                         value={editingBlock.structuredData?.ruleType || ''}
@@ -1851,15 +1964,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             ruleType: e.target.value
                           }
                         })}
-                        placeholder="Ej. Tono y Lenguaje, Actitud Comercial, Redirección Asistida"
-                        className="field-input"
+                        placeholder="Ej. Tono y Lenguaje, Actitud Comercial"
+                        className="field-input-compact text-purple-300 font-semibold"
                       />
                     </div>
 
-                    <div className="form-field">
-                      <label className="field-label">Objetivo en Ventas:</label>
-                      <input
-                        type="text"
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Objetivo en Ventas:</label>
+                      <textarea
+                        rows={3}
                         value={editingBlock.structuredData?.advisorInstructions || ''}
                         onChange={(e) => setEditingBlock({
                           ...editingBlock,
@@ -1868,44 +1981,190 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             advisorInstructions: e.target.value
                           }
                         })}
-                        placeholder="Ej. Generar confianza y concretar la cotización"
-                        className="field-input text-purple-300"
+                        placeholder="Objetivo concreto que debe lograr el bot con esta directriz"
+                        className="field-textarea-compact"
                       />
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Master Prompt Injected Content (Markdown) */}
-              <div className="form-field full mt-2">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <label className="field-label">
-                    Formato oficial inyectado en el Bot Asesor (Markdown):
-                  </label>
+                {/* Quick Auto-compile prompt button */}
+                <div className="mt-auto pt-2">
                   <button
                     type="button"
-                    className="btn-auto-prompt-gen"
+                    className="btn-sync-to-prompt"
                     onClick={() => {
                       const generated = generateContentFromBlock(editingBlock);
                       setEditingBlock({ ...editingBlock, content: generated });
                     }}
-                    title="Compilar automáticamente este texto a partir de los campos superiores"
+                    title="Compilar y pasar estos detalles al prompt maestro de la derecha"
                   >
-                    <RotateCcw size={12} />
-                    <span>Auto-generar desde campos</span>
+                    <RotateCcw size={13} />
+                    <span>⚡ Sincronizar Detalles ➔ Prompt</span>
                   </button>
                 </div>
-                <textarea
-                  rows={4}
-                  value={editingBlock.content}
-                  onChange={(e) => setEditingBlock({ ...editingBlock, content: e.target.value })}
-                  placeholder="Texto oficial que el asesor comercial leerá en su instrucción del sistema..."
-                  className="field-textarea font-mono text-xs"
-                />
-              </div>
+              </aside>
+
+              {/* ----------------------------------------------------------- */}
+              {/* RIGHT PANEL (~75% width): Main Master Prompt & Markdown     */}
+              {/* ----------------------------------------------------------- */}
+              <section className="modal-right-prompt-panel">
+                {/* Prompt Top Header */}
+                <div className="prompt-panel-topbar">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <FileText size={18} className="text-cyan-400" />
+                      <h4 className="prompt-panel-title">
+                        Prompt Maestro Oficial para el Bot Asesor (75% del ancho)
+                      </h4>
+                    </div>
+                    <p className="prompt-panel-desc">
+                      Este es el texto exacto que el Bot Asesor comercial consulta en tiempo real en Firestore para cotizar y orientar al cliente.
+                    </p>
+                  </div>
+
+                  {/* Mode Switcher: Edit Mode vs Formatted Preview Mode */}
+                  <div className="prompt-mode-tabs">
+                    <button
+                      type="button"
+                      className={`prompt-mode-tab ${promptViewMode === 'edit' ? 'active' : ''}`}
+                      onClick={() => setPromptViewMode('edit')}
+                    >
+                      <Edit3 size={14} />
+                      <span>Modo Edición (Markdown)</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`prompt-mode-tab ${promptViewMode === 'preview' ? 'active' : ''}`}
+                      onClick={() => setPromptViewMode('preview')}
+                    >
+                      <Eye size={14} />
+                      <span>Vista Previa Formateada</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Markdown Quick Formatting Toolbar (Available in Edit Mode) */}
+                {promptViewMode === 'edit' && (
+                  <div className="markdown-toolbar">
+                    <span className="toolbar-label">Herramientas Markdown:</span>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('**', '**')}
+                      title="Texto en negrita (**texto**)"
+                    >
+                      <Bold size={13} />
+                      <span>Negrita</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('*', '*')}
+                      title="Texto en cursiva (*texto*)"
+                    >
+                      <Italic size={13} />
+                      <span>Cursiva</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('## ')}
+                      title="Encabezado H2 (## Título)"
+                    >
+                      <Heading2 size={13} />
+                      <span>Título H2</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('### ')}
+                      title="Subtítulo H3 (### Subtítulo)"
+                    >
+                      <span>H3</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('- ')}
+                      title="Punto de lista (- Elemento)"
+                    >
+                      <List size={13} />
+                      <span>Lista</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('- **Directriz oficial:** ')}
+                      title="Directriz clave"
+                    >
+                      <span>✓ Directriz</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('- **Costo:** $', ' MXN')}
+                      title="Precio en pesos"
+                    >
+                      <span>💲 Precio</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-toolbar-tool"
+                      onClick={() => handleInsertMarkdownTag('`', '`')}
+                      title="Insignia de código (`etiqueta`)"
+                    >
+                      <Code size={13} />
+                      <span>Insignia</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Prompt Main Workspace */}
+                <div className="prompt-editor-workspace">
+                  {promptViewMode === 'edit' ? (
+                    <textarea
+                      id="modal-prompt-textarea"
+                      rows={16}
+                      value={editingBlock.content}
+                      onChange={(e) => setEditingBlock({ ...editingBlock, content: e.target.value })}
+                      placeholder="Escribe el bloque en formato Markdown enriquecido con títulos, viñetas y consignas para el asesor..."
+                      className="prompt-full-textarea"
+                    />
+                  ) : (
+                    <div className="prompt-preview-scrollbox">
+                      {editingBlock.content ? (
+                        renderMarkdownPreview(editingBlock.content, editingBlock.category)
+                      ) : (
+                        <div className="prompt-empty-preview">
+                          <p>El prompt está vacío actualmente. Escribe en el editor o pulsa "⚡ Sincronizar Detalles" en el panel izquierdo.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Prompt Status / Metrics Footer */}
+                <div className="prompt-panel-footer">
+                  <div className="prompt-metrics-row">
+                    <span className="metric-pill">
+                      <strong>Caracteres:</strong> {(editingBlock.content || '').length}
+                    </span>
+                    <span className="metric-pill">
+                      <strong>Palabras:</strong> {(editingBlock.content || '').trim().split(/\s+/).filter(Boolean).length}
+                    </span>
+                    <span className="metric-pill">
+                      <strong>Líneas:</strong> {(editingBlock.content || '').split('\n').length}
+                    </span>
+                  </div>
+                  <span className="prompt-sync-notice">
+                    🟢 Este bloque se inyectará en tiempo real en los documentos maestros de Firestore.
+                  </span>
+                </div>
+              </section>
             </div>
 
-            {/* Modal Footer */}
+            {/* Modal Bottom Actions Footer */}
             <div className="modal-footer">
               <button
                 type="button"
@@ -1922,7 +2181,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 disabled={saving || !editingBlock.title.trim()}
               >
                 <Save size={16} />
-                <span>{saving ? 'Guardando en Firestore...' : 'Guardar en Firestore'}</span>
+                <span>{saving ? 'Guardando en Firestore...' : 'Guardar y Sincronizar en Firestore'}</span>
               </button>
             </div>
           </div>
