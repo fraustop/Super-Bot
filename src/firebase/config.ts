@@ -18,14 +18,16 @@ import {
   type Firestore
 } from 'firebase/firestore';
 
+const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : ({} as Record<string, string>);
+
 // Live Firebase configuration for project super-bot-cic
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyBRXJRVdM3O6RNXtPKGJi8J3kPYtFBSouY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'super-bot-cic.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'super-bot-cic',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'super-bot-cic.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '143781160080',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:143781160080:web:13ebd4717cbfda68a9e415'
+  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyBRXJRVdM3O6RNXtPKGJi8J3kPYtFBSouY',
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'super-bot-cic.firebaseapp.com',
+  projectId: env.VITE_FIREBASE_PROJECT_ID || 'super-bot-cic',
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'super-bot-cic.firebasestorage.app',
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '143781160080',
+  appId: env.VITE_FIREBASE_APP_ID || '1:143781160080:web:13ebd4717cbfda68a9e415'
 };
 
 export const isFirebaseConfigured = Boolean(
@@ -93,9 +95,44 @@ export async function saveAdvisorRequest(
 }
 
 // ============================================================================
-// Authentication Helpers
+// Authentication Helpers & Local Session Fallback
 // ============================================================================
-export async function loginWithGoogle(): Promise<{ user?: User; error?: string }> {
+export interface AppUser {
+  displayName: string | null;
+  email: string | null;
+  photoURL?: string | null;
+  uid?: string;
+}
+
+const SESSION_USER_KEY = 'superbot_active_user_session';
+
+export function getLocalSessionUser(): AppUser | null {
+  try {
+    const raw = localStorage.getItem(SESSION_USER_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+export function saveLocalSessionUser(user: AppUser): void {
+  try {
+    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+  } catch {
+    // ignore
+  }
+}
+
+export function clearLocalSessionUser(): void {
+  try {
+    localStorage.removeItem(SESSION_USER_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export async function loginWithGoogle(): Promise<{ user?: User; error?: string; isConfigMissing?: boolean }> {
   if (!isFirebaseConfigured || !auth || !googleProvider) {
     return {
       error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
@@ -104,14 +141,26 @@ export async function loginWithGoogle(): Promise<{ user?: User; error?: string }
 
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    saveLocalSessionUser({
+      displayName: result.user.displayName,
+      email: result.user.email,
+      photoURL: result.user.photoURL,
+      uid: result.user.uid
+    });
     return { user: result.user };
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);
+    if (error.code === 'auth/configuration-not-found' || error.message?.includes('CONFIGURATION_NOT_FOUND')) {
+      return {
+        error: 'Firebase Authentication no está habilitado en tu consola de Firebase aún.',
+        isConfigMissing: true
+      };
+    }
     return { error: error.message || 'Error al iniciar sesión con Google' };
   }
 }
 
-export async function loginWithEmail(email: string, password: string): Promise<{ user?: User; error?: string }> {
+export async function loginWithEmail(email: string, password: string): Promise<{ user?: User | AppUser; error?: string; isConfigMissing?: boolean }> {
   if (!isFirebaseConfigured || !auth) {
     return {
       error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
@@ -120,9 +169,21 @@ export async function loginWithEmail(email: string, password: string): Promise<{
 
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
+    saveLocalSessionUser({
+      displayName: result.user.displayName || email.split('@')[0],
+      email: result.user.email,
+      photoURL: result.user.photoURL,
+      uid: result.user.uid
+    });
     return { user: result.user };
   } catch (error: any) {
     console.error('Email Sign-In Error:', error);
+    if (error.code === 'auth/configuration-not-found' || error.message?.includes('CONFIGURATION_NOT_FOUND')) {
+      return {
+        error: 'Firebase Authentication no está habilitado en tu consola de Firebase aún.',
+        isConfigMissing: true
+      };
+    }
     let message = 'Error al iniciar sesión';
     if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
       message = 'Correo electrónico o contraseña incorrectos';
@@ -133,7 +194,7 @@ export async function loginWithEmail(email: string, password: string): Promise<{
   }
 }
 
-export async function registerWithEmail(email: string, password: string): Promise<{ user?: User; error?: string }> {
+export async function registerWithEmail(email: string, password: string): Promise<{ user?: User | AppUser; error?: string; isConfigMissing?: boolean }> {
   if (!isFirebaseConfigured || !auth) {
     return {
       error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
@@ -142,9 +203,21 @@ export async function registerWithEmail(email: string, password: string): Promis
 
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
+    saveLocalSessionUser({
+      displayName: result.user.displayName || email.split('@')[0],
+      email: result.user.email,
+      photoURL: result.user.photoURL,
+      uid: result.user.uid
+    });
     return { user: result.user };
   } catch (error: any) {
     console.error('Email Registration Error:', error);
+    if (error.code === 'auth/configuration-not-found' || error.message?.includes('CONFIGURATION_NOT_FOUND')) {
+      return {
+        error: 'Firebase Authentication no está habilitado en tu consola de Firebase aún.',
+        isConfigMissing: true
+      };
+    }
     let message = 'Error al registrar usuario';
     if (error.code === 'auth/email-already-in-use') {
       message = 'Este correo electrónico ya está registrado';
@@ -156,6 +229,7 @@ export async function registerWithEmail(email: string, password: string): Promis
 }
 
 export async function logoutUser(): Promise<{ error?: string }> {
+  clearLocalSessionUser();
   if (!auth) return {};
   try {
     await signOut(auth);

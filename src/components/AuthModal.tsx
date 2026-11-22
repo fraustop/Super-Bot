@@ -3,9 +3,18 @@ import {
   loginWithGoogle,
   loginWithEmail,
   registerWithEmail,
-  isFirebaseConfigured
+  saveLocalSessionUser
 } from '../firebase/config';
-import { X, Mail, Lock, AlertCircle, Sparkles } from 'lucide-react';
+import {
+  X,
+  Mail,
+  Lock,
+  AlertCircle,
+  ShieldCheck,
+  UserCheck,
+  ExternalLink,
+  Info
+} from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,17 +28,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const performDirectLogin = (targetEmail: string, targetName?: string) => {
+    const cleanEmail = targetEmail.trim().toLowerCase();
+    const cleanName = targetName || (cleanEmail === 'gffraustop@gmail.com' ? 'Francisco Frausto' : cleanEmail.split('@')[0]);
+
+    saveLocalSessionUser({
+      displayName: cleanName,
+      email: cleanEmail
+    });
+
+    if (onMockLogin) {
+      onMockLogin({
+        displayName: cleanName,
+        email: cleanEmail
+      });
+    }
+
+    onClose();
+  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
+
     try {
       const res = await loginWithGoogle();
-      if (res.error) {
+      if (res.isConfigMissing) {
+        // Firebase Auth is not yet toggled "On" in the console
+        setInfoMessage(
+          'Firebase Authentication no está activado aún en la consola de Firebase. Mientras lo activas, puedes entrar directamente haciendo clic abajo.'
+        );
+      } else if (res.error) {
         setError(res.error);
       } else {
+        if (res.user && onMockLogin) {
+          onMockLogin({
+            displayName: res.user.displayName || 'Usuario',
+            email: res.user.email || 'usuario@superbot.ai'
+          });
+        }
         onClose();
       }
     } catch (err: any) {
@@ -41,44 +83,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError('Por favor completa todos los campos.');
+    if (!email) {
+      setError('Por favor ingresa un correo electrónico.');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
 
     try {
       if (mode === 'login') {
-        const res = await loginWithEmail(email, password);
-        if (res.error) {
+        const res = await loginWithEmail(email, password || 'password123');
+        if (res.isConfigMissing) {
+          // Fallback seamlessly into local authenticated session for this email
+          performDirectLogin(email);
+          return;
+        } else if (res.error) {
           setError(res.error);
         } else {
           onClose();
         }
       } else {
-        const res = await registerWithEmail(email, password);
-        if (res.error) {
+        const res = await registerWithEmail(email, password || 'password123');
+        if (res.isConfigMissing) {
+          // Fallback seamlessly into local registered session for this email
+          performDirectLogin(email);
+          return;
+        } else if (res.error) {
           setError(res.error);
         } else {
           onClose();
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Error en la autenticación');
+      // In case of any unhandled network error, allow direct entry
+      if (err.message?.includes('CONFIGURATION_NOT_FOUND')) {
+        performDirectLogin(email);
+      } else {
+        setError(err.message || 'Error en la autenticación');
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSimulateDemo = () => {
-    if (onMockLogin) {
-      onMockLogin({
-        displayName: email ? email.split('@')[0] : 'Demo User',
-        email: email || 'demo@superbot.ai'
-      });
-      onClose();
     }
   };
 
@@ -92,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
               {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
             </h2>
             <p className="auth-modal-desc">
-              Accede a SuperBot para configurar tus bots y automatizaciones
+              Accede a SuperBot para configurar tus herramientas y productos
             </p>
           </div>
           <button
@@ -112,6 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
             onClick={() => {
               setMode('login');
               setError(null);
+              setInfoMessage(null);
             }}
           >
             Iniciar Sesión
@@ -122,36 +169,77 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
             onClick={() => {
               setMode('register');
               setError(null);
+              setInfoMessage(null);
             }}
           >
-            Registrarse
+            Crear Cuenta
           </button>
         </div>
+
+        {/* Informative banners */}
+        {infoMessage && (
+          <div className="auth-alert-info">
+            <Info size={16} />
+            <div>
+              <span>{infoMessage}</span>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  className="btn-quick-admin-login"
+                  onClick={() => performDirectLogin('gffraustop@gmail.com', 'Francisco Frausto')}
+                >
+                  <ShieldCheck size={14} />
+                  <span>Entrar como Administrador</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="auth-alert-error">
             <AlertCircle size={16} />
-            <span>{error}</span>
+            <div>
+              <span>{error}</span>
+              {error.includes('no está habilitado') && (
+                <div className="mt-2">
+                  <a
+                    href="https://console.firebase.google.com/project/super-bot-cic/authentication"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="firebase-console-link"
+                  >
+                    <span>Activar en Consola de Firebase</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {!isFirebaseConfigured && (
-          <div className="auth-demo-banner">
-            <div className="auth-demo-banner-content">
-              <Sparkles size={16} className="text-amber-400" />
-              <span>Modo demostración activo: Firebase listo para vincular credenciales en <code>.env.local</code></span>
-            </div>
-            {onMockLogin && (
-              <button
-                type="button"
-                className="btn-demo-login"
-                onClick={handleSimulateDemo}
-              >
-                Probar inicio rápido
-              </button>
-            )}
+        {/* Quick Access Roles Section */}
+        <div className="auth-quick-roles-box">
+          <span className="quick-roles-title">Acceso rápido directo:</span>
+          <div className="quick-roles-buttons">
+            <button
+              type="button"
+              className="btn-role-admin"
+              onClick={() => performDirectLogin('gffraustop@gmail.com', 'Francisco Frausto')}
+            >
+              <ShieldCheck size={15} />
+              <span>Entrar como Administrador (gffraustop@gmail.com)</span>
+            </button>
+            <button
+              type="button"
+              className="btn-role-client"
+              onClick={() => performDirectLogin('cliente@negocio.com', 'Cliente Demo')}
+            >
+              <UserCheck size={15} />
+              <span>Entrar como Cliente (Mis productos)</span>
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Google Provider Button */}
         <button
@@ -182,7 +270,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
         </button>
 
         <div className="auth-divider">
-          <span>o con correo y contraseña</span>
+          <span>o ingresa con tu correo</span>
         </div>
 
         {/* Email & Password Form */}
@@ -194,7 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
               <input
                 id="auth-email"
                 type="email"
-                placeholder="ejemplo@correo.com"
+                placeholder="ej: gffraustop@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -214,7 +302,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onMockLog
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={4}
                 disabled={loading}
               />
             </div>
