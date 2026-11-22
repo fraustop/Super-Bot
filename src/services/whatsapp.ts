@@ -22,18 +22,20 @@ export async function sendAdvisorWhatsAppNotification(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const { preference, clientPhone, clientName, requestId, dateStr } = params;
 
-  const nowFormatted = dateStr || new Date().toLocaleString('es-MX', {
-    timeZone: 'America/Monterrey',
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  });
+  const nowFormatted =
+    dateStr ||
+    new Date().toLocaleString('es-MX', {
+      timeZone: 'America/Monterrey',
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
 
   const preferenceTitle =
     preference === 'call'
       ? '📞 QUIERE RECIBIR UNA LLAMADA TELEFÓNICA'
       : '💬 QUIERE RECIBIR UN MENSAJE DE WHATSAPP';
 
-  const body = [
+  const bodySpanish = [
     '🤖 *¡NUEVA SOLICITUD DE ASESOR EN SUPERBOT!* 🚀',
     '',
     `📌 *Preferencia:* ${preferenceTitle}`,
@@ -43,38 +45,82 @@ export async function sendAdvisorWhatsAppNotification(
     `📅 *Fecha y hora:* ${nowFormatted}`,
     '',
     preference === 'call'
-      ? '👉 *Acción:* Marcarle al cliente para brindarle atención.'
-      : '👉 *Acción:* Enviarle un mensaje de WhatsApp para resolver sus dudas.'
+      ? '👉 *Acción sugerida:* Marcarle al cliente para brindarle atención.'
+      : '👉 *Acción sugerida:* Enviarle un mensaje de WhatsApp para resolver sus dudas.'
   ]
     .filter(Boolean)
     .join('\n');
 
+  const url = `https://graph.facebook.com/v21.0/${WHATSAPP_CONFIG.phoneNumberId}/messages`;
+  const headers = {
+    Authorization: `Bearer ${WHATSAPP_CONFIG.token}`,
+    'Content-Type': 'application/json'
+  };
+
   try {
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${WHATSAPP_CONFIG.phoneNumberId}/messages`,
-      {
+    // 1. Intentar primero con la plantilla oficial en español si ya fue aprobada por Meta
+    try {
+      const templateResponse = await fetch(url, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${WHATSAPP_CONFIG.token}`,
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           messaging_product: 'whatsapp',
-          recipient_type: 'individual',
           to: WHATSAPP_CONFIG.advisorPhone,
-          type: 'text',
-          text: {
-            preview_url: false,
-            body
+          type: 'template',
+          template: {
+            name: 'alerta_solicitud_asesor_v1',
+            language: { code: 'es_MX' },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  {
+                    type: 'text',
+                    text:
+                      preference === 'call'
+                        ? 'Llamada telefónica'
+                        : 'Mensaje de WhatsApp'
+                  },
+                  { type: 'text', text: clientPhone },
+                  {
+                    type: 'text',
+                    text: clientName?.trim() || 'Cliente interesado'
+                  }
+                ]
+              }
+            ]
           }
         })
+      });
+
+      if (templateResponse.ok) {
+        const tData = await templateResponse.json();
+        return { success: true, messageId: tData.messages?.[0]?.id };
       }
-    );
+    } catch (tErr) {
+      console.warn('Plantilla en español en revisión por Meta, enviando mensaje directo en español:', tErr);
+    }
+
+    // 2. Envío directo del mensaje completo en español
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: WHATSAPP_CONFIG.advisorPhone,
+        type: 'text',
+        text: {
+          preview_url: false,
+          body: bodySpanish
+        }
+      })
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Error from WhatsApp Cloud API:', data);
+      console.error('Error al enviar WhatsApp en español:', data);
       return {
         success: false,
         error: data.error?.message || `HTTP ${response.status}: Error al enviar mensaje`
@@ -87,7 +133,7 @@ export async function sendAdvisorWhatsAppNotification(
       messageId
     };
   } catch (err: any) {
-    console.error('Network error sending WhatsApp notification:', err);
+    console.error('Error de red enviando WhatsApp:', err);
     return {
       success: false,
       error: err.message || 'Error de conexión con WhatsApp API'
