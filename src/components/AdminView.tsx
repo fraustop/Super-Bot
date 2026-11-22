@@ -136,7 +136,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setPromptViewMode('edit');
   };
 
-  // Open modal to manually create a new block (CLEAN: No dummy/example data!)
+  // Open modal to manually create a new block (CLEAN: No dummy/example data and no undefined values)
   const handleOpenManualCreate = (cat: 'product' | 'service' | 'instruction') => {
     const newBlock: BotKnowledgeBlock = {
       id: `block-${Date.now().toString(36)}`,
@@ -147,13 +147,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
       imageUrl: '',
       publishedToHome: true,
       structuredData: {
-        price: undefined,
-        monthlyPrice: undefined,
-        adjustmentPrice: undefined,
         deliveryFormat: '',
         frequency: '',
         channels: '',
-        ruleType: cat === 'instruction' ? 'Directriz General' : undefined,
         includes: '',
         additionalPackages: '',
         advisorInstructions: '',
@@ -167,7 +163,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
       updatedAt: new Date().toISOString(),
       authorEmail: adminEmail
     };
-    newBlock.content = '';
+    if (cat === 'instruction') {
+      newBlock.structuredData!.ruleType = 'Directriz General';
+    }
     setEditingBlock(newBlock);
     setIsNewManualBlock(true);
     setPromptViewMode('edit');
@@ -184,17 +182,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const imgUrl = editingBlock.imageUrl?.trim() || editingBlock.structuredData?.imageUrl?.trim() || '';
     const isPub = editingBlock.publishedToHome ?? editingBlock.structuredData?.publishedToHome ?? true;
 
+    // Filter out undefined values completely so Firestore setDoc never rejects the payload
+    const cleanedStructured: Record<string, any> = {};
+    if (editingBlock.structuredData) {
+      for (const [key, val] of Object.entries(editingBlock.structuredData)) {
+        if (val !== undefined) {
+          cleanedStructured[key] = val;
+        }
+      }
+    }
+    cleanedStructured.imageUrl = imgUrl;
+    cleanedStructured.publishedToHome = isPub;
+
+    // Ensure prompt content is preserved
+    const promptContent = editingBlock.content?.trim() || generateContentFromBlock(editingBlock);
+
     const blockToSave: BotKnowledgeBlock = {
       ...editingBlock,
       imageUrl: imgUrl,
       publishedToHome: isPub,
-      structuredData: {
-        ...editingBlock.structuredData,
-        imageUrl: imgUrl,
-        publishedToHome: isPub
-      },
+      structuredData: cleanedStructured,
       summary: editingBlock.summary.trim() || editingBlock.structuredData?.includes || editingBlock.title,
-      content: editingBlock.content.trim() || generateContentFromBlock(editingBlock),
+      content: promptContent,
       updatedAt: new Date().toISOString(),
       authorEmail: adminEmail
     };
@@ -1345,13 +1354,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <input
                         type="number"
                         value={editingBlock.structuredData?.price !== undefined ? editingBlock.structuredData.price : ''}
-                        onChange={(e) => setEditingBlock({
-                          ...editingBlock,
-                          structuredData: {
-                            ...editingBlock.structuredData,
-                            price: e.target.value !== '' ? Number(e.target.value) : undefined
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          const nextStructured = { ...editingBlock.structuredData };
+                          if (val !== '') {
+                            nextStructured.price = Number(val);
+                          } else {
+                            delete nextStructured.price;
                           }
-                        })}
+                          setEditingBlock({
+                            ...editingBlock,
+                            structuredData: nextStructured
+                          });
+                        }}
                         placeholder="Ej. 300"
                         className="field-input-compact text-emerald-400 font-bold"
                       />
@@ -1434,14 +1449,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <label className="field-label-compact">Renta Mensual ($ MXN/mes):</label>
                       <input
                         type="number"
-                        value={editingBlock.structuredData?.monthlyPrice ?? ''}
-                        onChange={(e) => setEditingBlock({
-                          ...editingBlock,
-                          structuredData: {
-                            ...editingBlock.structuredData,
-                            monthlyPrice: e.target.value ? Number(e.target.value) : undefined
+                        value={editingBlock.structuredData?.monthlyPrice !== undefined ? editingBlock.structuredData.monthlyPrice : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          const nextStructured = { ...editingBlock.structuredData };
+                          if (val !== '') {
+                            nextStructured.monthlyPrice = Number(val);
+                          } else {
+                            delete nextStructured.monthlyPrice;
                           }
-                        })}
+                          setEditingBlock({
+                            ...editingBlock,
+                            structuredData: nextStructured
+                          });
+                        }}
                         placeholder="Ej. 1000"
                         className="field-input-compact text-cyan-400 font-bold"
                       />
@@ -1451,14 +1472,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <label className="field-label-compact">O Costo por Ajuste ($ MXN):</label>
                       <input
                         type="number"
-                        value={editingBlock.structuredData?.adjustmentPrice ?? ''}
-                        onChange={(e) => setEditingBlock({
-                          ...editingBlock,
-                          structuredData: {
-                            ...editingBlock.structuredData,
-                            adjustmentPrice: e.target.value ? Number(e.target.value) : undefined
+                        value={editingBlock.structuredData?.adjustmentPrice !== undefined ? editingBlock.structuredData.adjustmentPrice : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          const nextStructured = { ...editingBlock.structuredData };
+                          if (val !== '') {
+                            nextStructured.adjustmentPrice = Number(val);
+                          } else {
+                            delete nextStructured.adjustmentPrice;
                           }
-                        })}
+                          setEditingBlock({
+                            ...editingBlock,
+                            structuredData: nextStructured
+                          });
+                        }}
                         placeholder="Ej. 100"
                         className="field-input-compact text-amber-400 font-bold"
                       />

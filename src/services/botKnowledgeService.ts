@@ -556,6 +556,39 @@ export function subscribeToBotKnowledge(
 }
 
 /**
+ * Recursively cleans any object or array to ensure no `undefined` values
+ * are passed to Firestore setDoc/updateDoc/addDoc, which strictly rejects them.
+ */
+export function cleanFirestorePayload<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj
+      .filter((item) => item !== undefined)
+      .map((item) => cleanFirestorePayload(item)) as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    // Preserve Firestore FieldValue tokens like serverTimestamp()
+    if (
+      obj &&
+      typeof (obj as any).isEqual === 'function' &&
+      typeof (obj as any).toMillis === 'function'
+    ) {
+      return obj;
+    }
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val !== undefined) {
+        cleaned[key] = cleanFirestorePayload(val);
+      }
+    }
+    return cleaned as T;
+  }
+  return obj;
+}
+
+/**
  * Save updated bot knowledge document to Firestore master document.
  */
 export async function saveBotKnowledgeToFirestore(
@@ -587,8 +620,8 @@ export async function saveBotKnowledgeToFirestore(
 
   try {
     const docRef = doc(db, KNOWLEDGE_DOC_PATH.collection, KNOWLEDGE_DOC_PATH.docId);
-    // Explicit clean overwrite to ensure empty array [] is never corrupted by merge
-    await setDoc(docRef, {
+    // Deep-clean payload to completely eliminate any `undefined` values that Firestore rejects
+    const rawPayload = {
       pricing: currentActiveConfig.pricing,
       quotas: currentActiveConfig.quotas,
       rules: currentActiveConfig.rules,
@@ -598,7 +631,9 @@ export async function saveBotKnowledgeToFirestore(
       lastUpdated: currentActiveConfig.lastUpdated,
       updatedBy: currentActiveConfig.updatedBy,
       serverTimestamp: serverTimestamp()
-    });
+    };
+    const cleanPayload = cleanFirestorePayload(rawPayload);
+    await setDoc(docRef, cleanPayload);
 
     return { success: true };
   } catch (err: any) {
@@ -674,10 +709,11 @@ export async function addOrUpdateKnowledgeBlock(
   if (db) {
     try {
       const blockDocRef = doc(db, 'bot_knowledge_blocks', finalBlock.id);
-      await setDoc(blockDocRef, {
+      const cleanBlockPayload = cleanFirestorePayload({
         ...finalBlock,
         serverTimestamp: serverTimestamp()
-      }, { merge: true });
+      });
+      await setDoc(blockDocRef, cleanBlockPayload, { merge: true });
     } catch (blockErr) {
       console.warn('Could not save individual block document to collection:', blockErr);
     }
