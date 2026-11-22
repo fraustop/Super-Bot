@@ -387,8 +387,21 @@ export const DEFAULT_BOT_KNOWLEDGE: BotKnowledgeConfig = {
   updatedBy: 'system'
 };
 
-const STORAGE_KEY = 'superbot_cached_knowledge_v4';
+const STORAGE_KEY = 'superbot_cached_knowledge_v5';
 const KNOWLEDGE_DOC_PATH = { collection: 'bot_knowledge', docId: 'active_config' };
+
+// Active local subscribers to bot knowledge
+const knowledgeSubscribers = new Set<(config: BotKnowledgeConfig) => void>();
+
+function notifyKnowledgeSubscribers(conf: BotKnowledgeConfig) {
+  knowledgeSubscribers.forEach((cb) => {
+    try {
+      cb(conf);
+    } catch (e) {
+      console.warn('Error in knowledge subscriber callback:', e);
+    }
+  });
+}
 
 // In-memory active configuration
 let currentActiveConfig: BotKnowledgeConfig = (() => {
@@ -399,15 +412,18 @@ let currentActiveConfig: BotKnowledgeConfig = (() => {
       return {
         ...DEFAULT_BOT_KNOWLEDGE,
         ...parsed,
-        knowledgeBlocks: Array.isArray(parsed.knowledgeBlocks) && parsed.knowledgeBlocks.length > 0
+        knowledgeBlocks: Array.isArray(parsed.knowledgeBlocks)
           ? parsed.knowledgeBlocks
-          : DEFAULT_KNOWLEDGE_BLOCKS
+          : []
       };
     }
   } catch {
     // ignore
   }
-  return DEFAULT_BOT_KNOWLEDGE;
+  return {
+    ...DEFAULT_BOT_KNOWLEDGE,
+    knowledgeBlocks: []
+  };
 })();
 
 export function getActiveBotKnowledge(): BotKnowledgeConfig {
@@ -433,28 +449,35 @@ export function isInstructionBlock(block: BotKnowledgeBlock): boolean {
 export function subscribeToBotKnowledge(
   callback: (config: BotKnowledgeConfig) => void
 ): () => void {
+  knowledgeSubscribers.add(callback);
   callback(currentActiveConfig);
 
   if (!db) {
-    return () => {};
+    return () => {
+      knowledgeSubscribers.delete(callback);
+    };
   }
 
   try {
     const docRef = doc(db, KNOWLEDGE_DOC_PATH.collection, KNOWLEDGE_DOC_PATH.docId);
-    const unsubscribe = onSnapshot(
+    const unsubscribeFirestore = onSnapshot(
       docRef,
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as Partial<BotKnowledgeConfig>;
+          // CRITICAL: Respect explicit empty array [] from Firestore when items are deleted!
+          // Only fallback to default sample blocks if knowledgeBlocks is completely undefined in Firestore.
+          const firestoreBlocks = Array.isArray(data.knowledgeBlocks)
+            ? data.knowledgeBlocks
+            : DEFAULT_KNOWLEDGE_BLOCKS;
+
           currentActiveConfig = {
             pricing: { ...DEFAULT_BOT_KNOWLEDGE.pricing, ...data.pricing },
             quotas: { ...DEFAULT_BOT_KNOWLEDGE.quotas, ...data.quotas },
             rules: { ...DEFAULT_BOT_KNOWLEDGE.rules, ...data.rules },
             customNotes: data.customNotes || '',
             systemPromptText: data.systemPromptText || '',
-            knowledgeBlocks: Array.isArray(data.knowledgeBlocks) && data.knowledgeBlocks.length > 0
-              ? data.knowledgeBlocks
-              : (currentActiveConfig.knowledgeBlocks?.length > 0 ? currentActiveConfig.knowledgeBlocks : DEFAULT_KNOWLEDGE_BLOCKS),
+            knowledgeBlocks: firestoreBlocks,
             lastUpdated: data.lastUpdated || new Date().toISOString(),
             updatedBy: data.updatedBy || 'admin'
           };
@@ -463,7 +486,7 @@ export function subscribeToBotKnowledge(
           } catch {
             // ignore
           }
-          callback(currentActiveConfig);
+          notifyKnowledgeSubscribers(currentActiveConfig);
         } else {
           saveBotKnowledgeToFirestore(DEFAULT_BOT_KNOWLEDGE, 'init');
         }
@@ -473,10 +496,15 @@ export function subscribeToBotKnowledge(
       }
     );
 
-    return unsubscribe;
+    return () => {
+      knowledgeSubscribers.delete(callback);
+      unsubscribeFirestore();
+    };
   } catch (err) {
     console.warn('Could not establish Firestore listener for bot knowledge:', err);
-    return () => {};
+    return () => {
+      knowledgeSubscribers.delete(callback);
+    };
   }
 }
 
@@ -489,6 +517,7 @@ export async function saveBotKnowledgeToFirestore(
 ): Promise<{ success: boolean; error?: string }> {
   currentActiveConfig = {
     ...config,
+    knowledgeBlocks: Array.isArray(config.knowledgeBlocks) ? config.knowledgeBlocks : [],
     lastUpdated: new Date().toISOString(),
     updatedBy: userEmail
   };
@@ -499,6 +528,9 @@ export async function saveBotKnowledgeToFirestore(
     // ignore
   }
 
+  // Broadcast change immediately to all active UI subscribers
+  notifyKnowledgeSubscribers(currentActiveConfig);
+
   if (!db) {
     return {
       success: true,
@@ -508,10 +540,18 @@ export async function saveBotKnowledgeToFirestore(
 
   try {
     const docRef = doc(db, KNOWLEDGE_DOC_PATH.collection, KNOWLEDGE_DOC_PATH.docId);
+    // Explicit clean overwrite to ensure empty array [] is never corrupted by merge
     await setDoc(docRef, {
-      ...currentActiveConfig,
+      pricing: currentActiveConfig.pricing,
+      quotas: currentActiveConfig.quotas,
+      rules: currentActiveConfig.rules,
+      customNotes: currentActiveConfig.customNotes || '',
+      systemPromptText: currentActiveConfig.systemPromptText || '',
+      knowledgeBlocks: currentActiveConfig.knowledgeBlocks,
+      lastUpdated: currentActiveConfig.lastUpdated,
+      updatedBy: currentActiveConfig.updatedBy,
       serverTimestamp: serverTimestamp()
-    }, { merge: true });
+    });
 
     return { success: true };
   } catch (err: any) {
@@ -610,7 +650,10 @@ export async function deleteKnowledgeBlock(
   blockId: string,
   userEmail: string
 ): Promise<{ success: boolean; error?: string }> {
-  const filtered = currentActiveConfig.knowledgeBlocks.filter(b => b.id !== blockId);
+  const currentList = Array.isArray(currentActiveConfig.knowledgeBlocks)
+    ? currentActiveConfig.knowledgeBlocks
+    : [];
+  const filtered = currentList.filter(b => b.id !== blockId);
   const updatedConfig: BotKnowledgeConfig = {
     ...currentActiveConfig,
     knowledgeBlocks: filtered,
@@ -630,6 +673,36 @@ export async function deleteKnowledgeBlock(
   }
 
   return saveRes;
+}
+
+/**
+ * Delete all knowledge blocks belonging to a specific category.
+ */
+export async function deleteBlocksByCategory(
+  category: 'product' | 'service' | 'instruction',
+  userEmail: string
+): Promise<{ success: boolean; error?: string }> {
+  const currentList = Array.isArray(currentActiveConfig.knowledgeBlocks)
+    ? currentActiveConfig.knowledgeBlocks
+    : [];
+
+  let filtered: BotKnowledgeBlock[];
+  if (category === 'product') {
+    filtered = currentList.filter(b => !isProductBlock(b));
+  } else if (category === 'service') {
+    filtered = currentList.filter(b => !isServiceBlock(b));
+  } else {
+    filtered = currentList.filter(b => !isInstructionBlock(b));
+  }
+
+  const updatedConfig: BotKnowledgeConfig = {
+    ...currentActiveConfig,
+    knowledgeBlocks: filtered,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: userEmail
+  };
+
+  return await saveBotKnowledgeToFirestore(updatedConfig, userEmail);
 }
 
 // ============================================================================

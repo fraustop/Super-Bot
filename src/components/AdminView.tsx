@@ -31,10 +31,12 @@ import {
   type BotKnowledgeConfig,
   type BotKnowledgeBlock,
   DEFAULT_BOT_KNOWLEDGE,
+  getActiveBotKnowledge,
   subscribeToBotKnowledge,
   saveBotKnowledgeToFirestore,
   addOrUpdateKnowledgeBlock,
   deleteKnowledgeBlock,
+  deleteBlocksByCategory,
   isProductBlock,
   isServiceBlock,
   isInstructionBlock
@@ -58,7 +60,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   theme = 'dark',
   onToggleTheme
 }) => {
-  const [config, setConfig] = useState<BotKnowledgeConfig>(DEFAULT_BOT_KNOWLEDGE);
+  const [config, setConfig] = useState<BotKnowledgeConfig>(getActiveBotKnowledge());
   const [activeTab, setActiveTab] = useState<'products' | 'services' | 'instructions' | 'pricing' | 'raw'>('products');
 
   // Manual Block Editing Modal State
@@ -265,9 +267,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Delete an existing knowledge block
   const handleDeleteBlock = async (blockId: string, blockTitle: string) => {
-    if (!window.confirm(`¿Estás seguro de eliminar "${blockTitle}" de los documentos maestros de Firestore?`)) {
+    if (!window.confirm(`¿Estás seguro de eliminar "${blockTitle}" de Firestore? No volverá a aparecer.`)) {
       return;
     }
+
+    // Immediately remove from UI state
+    setConfig(prev => ({
+      ...prev,
+      knowledgeBlocks: (prev.knowledgeBlocks || []).filter(b => b.id !== blockId)
+    }));
 
     setSaving(true);
     const res = await deleteKnowledgeBlock(blockId, adminEmail);
@@ -276,9 +284,42 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (res.success) {
       setSaveStatus({
         type: 'success',
-        message: `"${blockTitle}" eliminado de Firestore.`
+        message: `"${blockTitle}" eliminado permanentemente.`
       });
-      setTimeout(() => setSaveStatus(null), 4000);
+      setTimeout(() => setSaveStatus(null), 3500);
+    } else {
+      setSaveStatus({
+        type: 'error',
+        message: res.error || 'Error al eliminar de Firestore'
+      });
+    }
+  };
+
+  // Delete all knowledge blocks belonging to a category
+  const handleDeleteCategoryAll = async (category: 'product' | 'service' | 'instruction') => {
+    const label = category === 'product' ? 'todos los Productos' : category === 'service' ? 'todos los Servicios' : 'todas las Instrucciones';
+    if (!window.confirm(`¿Estás seguro de eliminar ${label}? Esta acción los removerá permanentemente de Firestore.`)) {
+      return;
+    }
+
+    setConfig(prev => {
+      let filtered = prev.knowledgeBlocks || [];
+      if (category === 'product') filtered = filtered.filter(b => !isProductBlock(b));
+      else if (category === 'service') filtered = filtered.filter(b => !isServiceBlock(b));
+      else filtered = filtered.filter(b => !isInstructionBlock(b));
+      return { ...prev, knowledgeBlocks: filtered };
+    });
+
+    setSaving(true);
+    const res = await deleteBlocksByCategory(category, adminEmail);
+    setSaving(false);
+
+    if (res.success) {
+      setSaveStatus({
+        type: 'success',
+        message: `Se eliminaron ${label} de Firestore.`
+      });
+      setTimeout(() => setSaveStatus(null), 3500);
     } else {
       setSaveStatus({
         type: 'error',
@@ -517,6 +558,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </p>
                 </div>
                 <div className="category-header-actions">
+                  {productBlocks.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-category-clear-all"
+                      onClick={() => handleDeleteCategoryAll('product')}
+                      title="Eliminar todos los productos de Firestore"
+                    >
+                      <Trash2 size={14} />
+                      <span>Vaciar Productos</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-category-manual green"
@@ -637,6 +689,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </p>
                 </div>
                 <div className="category-header-actions">
+                  {serviceBlocks.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-category-clear-all"
+                      onClick={() => handleDeleteCategoryAll('service')}
+                      title="Eliminar todos los servicios de Firestore"
+                    >
+                      <Trash2 size={14} />
+                      <span>Vaciar Servicios</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-category-manual cyan"
@@ -765,6 +828,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </p>
                 </div>
                 <div className="category-header-actions">
+                  {instructionBlocks.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-category-clear-all"
+                      onClick={() => handleDeleteCategoryAll('instruction')}
+                      title="Eliminar todas las instrucciones de Firestore"
+                    >
+                      <Trash2 size={14} />
+                      <span>Vaciar Instrucciones</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-category-manual purple"
