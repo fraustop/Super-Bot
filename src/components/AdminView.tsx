@@ -25,7 +25,8 @@ import {
   Italic,
   Heading2,
   List,
-  Code
+  Code,
+  Globe
 } from 'lucide-react';
 import {
   type BotKnowledgeConfig,
@@ -89,26 +90,43 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // Helper to compile a clean markdown prompt block from structured data
   const generateContentFromBlock = (b: BotKnowledgeBlock): string => {
     if (b.category === 'instruction') {
-      const ruleType = b.structuredData?.ruleType || 'Directriz de Asesor';
-      const advice = b.structuredData?.advisorInstructions || b.summary || 'Cumplir en toda interacción comercial';
-      return `### INSTRUCCIÓN OBLIGATORIA AL ASESOR: ${b.title.toUpperCase()}\n\n- **Tipo de directriz:** ${ruleType}\n- **Directriz oficial:** ${advice}\n- **Regla estricta:** Aplicar de forma obligatoria en todas las respuestas y cotizaciones comerciales del Bot Asesor comercial Super-Bot.`;
+      const ruleType = b.structuredData?.ruleType || 'Directriz';
+      const advice = b.structuredData?.advisorInstructions || b.summary || '';
+      const lines = [`### INSTRUCCIÓN OFICIAL AL ASESOR: ${(b.title || 'NUEVA DIRECTRIZ').toUpperCase()}`];
+      lines.push(`- **Tipo:** ${ruleType}`);
+      if (advice) lines.push(`- **Directriz:** ${advice}`);
+      return lines.join('\n\n');
     }
     if (b.category === 'service') {
-      const isMonthly = Boolean(b.structuredData?.monthlyPrice);
-      const priceText = isMonthly ? `$${b.structuredData?.monthlyPrice} MXN/mes` : `$${b.structuredData?.adjustmentPrice || 100} MXN por ajuste`;
-      const freq = b.structuredData?.frequency || (isMonthly ? 'Mensual recurrente' : 'Por evento');
-      const channels = b.structuredData?.channels || 'WhatsApp Cloud API y Web';
-      const inc = b.structuredData?.includes || b.summary || 'Atención y soporte continuo';
-      const advice = b.structuredData?.advisorInstructions || 'Ofrecer a prospectos que buscan solución continua para su negocio.';
-      return `### SERVICIO OFICIAL: ${b.title.toUpperCase()}\n\n- **Tarifa oficial:** ${priceText} (${freq})\n- **Canales de operación:** ${channels}\n- **Alcance y cobertura:** ${inc}\n- **Consigna para el Asesor:** ${advice}`;
+      const priceText = b.structuredData?.monthlyPrice !== undefined
+        ? `$${b.structuredData.monthlyPrice} MXN/mes`
+        : b.structuredData?.adjustmentPrice !== undefined
+          ? `$${b.structuredData.adjustmentPrice} MXN por ajuste`
+          : '';
+      const freq = b.structuredData?.frequency || '';
+      const channels = b.structuredData?.channels || '';
+      const inc = b.structuredData?.includes || b.summary || '';
+      const advice = b.structuredData?.advisorInstructions || '';
+      const lines = [`### SERVICIO OFICIAL: ${(b.title || 'NUEVO SERVICIO').toUpperCase()}`];
+      if (priceText || freq) lines.push(`- **Tarifa oficial:** ${priceText}${freq ? ` (${freq})` : ''}`.trim());
+      if (channels) lines.push(`- **Canales de operación:** ${channels}`);
+      if (inc) lines.push(`- **Alcance y cobertura:** ${inc}`);
+      if (advice) lines.push(`- **Consigna para el Asesor:** ${advice}`);
+      return lines.join('\n\n');
     }
     // Product
-    const price = b.structuredData?.price || 300;
-    const format = b.structuredData?.deliveryFormat || 'Despliegue web inmediato';
-    const inc = b.structuredData?.includes || b.summary || 'Entrega completa llave en mano';
-    const addOns = b.structuredData?.additionalPackages || 'Póliza de ajustes posteriores por $100 MXN';
-    const advice = b.structuredData?.advisorInstructions || 'Presentar como solución de entrada para iniciar a vender de inmediato.';
-    return `### PRODUCTO OFICIAL DEL CATÁLOGO: ${b.title.toUpperCase()}\n\n- **Costo base:** $${price} MXN (pago único inicial)\n- **Formato de entrega:** ${format}\n- **Qué incluye:** ${inc}\n- **Paquetes complementarios:** ${addOns}\n- **Consigna para el Asesor:** ${advice}`;
+    const priceText = b.structuredData?.price !== undefined ? `$${b.structuredData.price} MXN (pago único)` : '';
+    const format = b.structuredData?.deliveryFormat || '';
+    const inc = b.structuredData?.includes || b.summary || '';
+    const addOns = b.structuredData?.additionalPackages || '';
+    const advice = b.structuredData?.advisorInstructions || '';
+    const lines = [`### PRODUCTO OFICIAL DEL CATÁLOGO: ${(b.title || 'NUEVO PRODUCTO').toUpperCase()}`];
+    if (priceText) lines.push(`- **Costo base:** ${priceText}`);
+    if (format) lines.push(`- **Formato de entrega:** ${format}`);
+    if (inc) lines.push(`- **Qué incluye:** ${inc}`);
+    if (addOns) lines.push(`- **Paquetes complementarios:** ${addOns}`);
+    if (advice) lines.push(`- **Consigna para el Asesor:** ${advice}`);
+    return lines.join('\n\n');
   };
 
   // Open modal to manually edit an existing block
@@ -118,32 +136,38 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setPromptViewMode('edit');
   };
 
-  // Open modal to manually create a new block
+  // Open modal to manually create a new block (CLEAN: No dummy/example data!)
   const handleOpenManualCreate = (cat: 'product' | 'service' | 'instruction') => {
     const newBlock: BotKnowledgeBlock = {
       id: `block-${Date.now().toString(36)}`,
-      title: cat === 'product' ? 'Nuevo Producto' : cat === 'service' ? 'Nuevo Servicio' : 'Nueva Instrucción al Bot',
+      title: '',
       category: cat,
       summary: '',
       content: '',
+      imageUrl: '',
+      publishedToHome: true,
       structuredData: {
-        price: cat === 'product' ? 300 : undefined,
-        monthlyPrice: cat === 'service' ? 1000 : undefined,
-        adjustmentPrice: cat === 'service' ? 100 : undefined,
-        deliveryFormat: cat === 'product' ? 'Despliegue web inmediato' : undefined,
-        frequency: cat === 'service' ? 'Mensual recurrente' : undefined,
-        channels: cat === 'service' ? 'WhatsApp Cloud API, Web' : undefined,
-        ruleType: cat === 'instruction' ? 'Tono y Lenguaje' : undefined,
+        price: undefined,
+        monthlyPrice: undefined,
+        adjustmentPrice: undefined,
+        deliveryFormat: '',
+        frequency: '',
+        channels: '',
+        ruleType: cat === 'instruction' ? 'Directriz General' : undefined,
         includes: '',
         additionalPackages: '',
-        advisorInstructions: ''
+        advisorInstructions: '',
+        imageUrl: '',
+        publishedToHome: true,
+        tag: cat === 'product' ? 'Páginas Web' : cat === 'service' ? 'Bots de Atención' : 'Directriz',
+        utilities: []
       },
       status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       authorEmail: adminEmail
     };
-    newBlock.content = generateContentFromBlock(newBlock);
+    newBlock.content = '';
     setEditingBlock(newBlock);
     setIsNewManualBlock(true);
     setPromptViewMode('edit');
@@ -157,8 +181,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
+    const imgUrl = editingBlock.imageUrl?.trim() || editingBlock.structuredData?.imageUrl?.trim() || '';
+    const isPub = editingBlock.publishedToHome ?? editingBlock.structuredData?.publishedToHome ?? true;
+
     const blockToSave: BotKnowledgeBlock = {
       ...editingBlock,
+      imageUrl: imgUrl,
+      publishedToHome: isPub,
+      structuredData: {
+        ...editingBlock.structuredData,
+        imageUrl: imgUrl,
+        publishedToHome: isPub
+      },
       summary: editingBlock.summary.trim() || editingBlock.structuredData?.includes || editingBlock.title,
       content: editingBlock.content.trim() || generateContentFromBlock(editingBlock),
       updatedAt: new Date().toISOString(),
@@ -189,6 +223,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
         message: res.error || 'Error al guardar manualmente en Firestore.'
       });
     }
+  };
+
+  // Quick toggle publication to home page directly from the card
+  const handleTogglePublishHome = async (block: BotKnowledgeBlock) => {
+    const isCurrentlyPublished = block.publishedToHome ?? block.structuredData?.publishedToHome ?? false;
+    const nextVal = !isCurrentlyPublished;
+    const updatedBlock: BotKnowledgeBlock = {
+      ...block,
+      publishedToHome: nextVal,
+      structuredData: {
+        ...block.structuredData,
+        publishedToHome: nextVal
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update local state immediately
+    setConfig(prev => ({
+      ...prev,
+      knowledgeBlocks: (prev.knowledgeBlocks || []).map(b => b.id === block.id ? updatedBlock : b)
+    }));
+
+    await addOrUpdateKnowledgeBlock(updatedBlock, adminEmail);
   };
 
   // Helper to insert markdown tags at cursor position
@@ -585,10 +642,37 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="category-cards-grid">
                   {productBlocks.map((block) => (
                     <div key={block.id} className="category-card product-card">
+                      {(block.imageUrl || block.structuredData?.imageUrl) && (
+                        <div className="category-card-thumb-banner">
+                          <img
+                            src={block.imageUrl || block.structuredData?.imageUrl}
+                            alt={block.title}
+                            className="card-thumb-img"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+
                       <div className="category-card-header">
                         <div className="category-title-group">
-                          <h4 className="category-card-title">{block.title}</h4>
-                          <span className="category-tag-pill green">PRODUCTO</span>
+                          <h4 className="category-card-title">{block.title || 'Sin título'}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="category-tag-pill green">PRODUCTO</span>
+                            <button
+                              type="button"
+                              className={`publication-pill ${(block.publishedToHome ?? block.structuredData?.publishedToHome) ? 'published' : 'hidden'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePublishHome(block);
+                              }}
+                              title={(block.publishedToHome ?? block.structuredData?.publishedToHome) ? 'Publicado en Inicio (Haz clic para ocultar)' : 'Oculto en Inicio (Haz clic para publicar)'}
+                            >
+                              <Globe size={11} />
+                              <span>{(block.publishedToHome ?? block.structuredData?.publishedToHome) ? '🌐 En Inicio' : '⚪ Oculto'}</span>
+                            </button>
+                          </div>
                         </div>
                         {block.structuredData?.price !== undefined && (
                           <div className="category-price-tag green">
@@ -716,10 +800,37 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="category-cards-grid">
                   {serviceBlocks.map((block) => (
                     <div key={block.id} className="category-card service-card">
+                      {(block.imageUrl || block.structuredData?.imageUrl) && (
+                        <div className="category-card-thumb-banner">
+                          <img
+                            src={block.imageUrl || block.structuredData?.imageUrl}
+                            alt={block.title}
+                            className="card-thumb-img"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+
                       <div className="category-card-header">
                         <div className="category-title-group">
-                          <h4 className="category-card-title">{block.title}</h4>
-                          <span className="category-tag-pill cyan">SERVICIO</span>
+                          <h4 className="category-card-title">{block.title || 'Sin título'}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="category-tag-pill cyan">SERVICIO</span>
+                            <button
+                              type="button"
+                              className={`publication-pill ${(block.publishedToHome ?? block.structuredData?.publishedToHome) ? 'published' : 'hidden'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePublishHome(block);
+                              }}
+                              title={(block.publishedToHome ?? block.structuredData?.publishedToHome) ? 'Publicado en Inicio (Haz clic para ocultar)' : 'Oculto en Inicio (Haz clic para publicar)'}
+                            >
+                              <Globe size={11} />
+                              <span>{(block.publishedToHome ?? block.structuredData?.publishedToHome) ? '🌐 En Inicio' : '⚪ Oculto'}</span>
+                            </button>
+                          </div>
                         </div>
                         {block.structuredData?.monthlyPrice !== undefined && (
                           <div className="category-price-tag cyan">
@@ -1148,8 +1259,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           category: 'product',
                           structuredData: {
                             ...editingBlock.structuredData,
-                            price: editingBlock.structuredData?.price || 300,
-                            deliveryFormat: editingBlock.structuredData?.deliveryFormat || 'Despliegue web inmediato'
+                            price: editingBlock.structuredData?.price,
+                            deliveryFormat: editingBlock.structuredData?.deliveryFormat || ''
                           }
                         };
                         updated.content = generateContentFromBlock(updated);
@@ -1168,9 +1279,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           category: 'service',
                           structuredData: {
                             ...editingBlock.structuredData,
-                            monthlyPrice: editingBlock.structuredData?.monthlyPrice || 1000,
-                            frequency: editingBlock.structuredData?.frequency || 'Mensual recurrente',
-                            channels: editingBlock.structuredData?.channels || 'WhatsApp Cloud API, Web'
+                            monthlyPrice: editingBlock.structuredData?.monthlyPrice,
+                            frequency: editingBlock.structuredData?.frequency || '',
+                            channels: editingBlock.structuredData?.channels || ''
                           }
                         };
                         updated.content = generateContentFromBlock(updated);
@@ -1189,7 +1300,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           category: 'instruction',
                           structuredData: {
                             ...editingBlock.structuredData,
-                            ruleType: editingBlock.structuredData?.ruleType || 'Tono y Lenguaje'
+                            ruleType: editingBlock.structuredData?.ruleType || 'Directriz General'
                           }
                         };
                         updated.content = generateContentFromBlock(updated);
@@ -1209,7 +1320,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     type="text"
                     value={editingBlock.title}
                     onChange={(e) => setEditingBlock({ ...editingBlock, title: e.target.value })}
-                    placeholder="Ej. Página Web Sencilla ($300 MXN)"
+                    placeholder={editingBlock.category === 'product' ? 'Ej. Página Web Sencilla ($300 MXN)' : editingBlock.category === 'service' ? 'Ej. Renta de Bot ($1,000 MXN/mes)' : 'Ej. Responder con tono comercial'}
                     className="field-input-compact font-bold"
                   />
                 </div>
@@ -1233,14 +1344,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <label className="field-label-compact">Precio Único ($ MXN):</label>
                       <input
                         type="number"
-                        value={editingBlock.structuredData?.price ?? 300}
+                        value={editingBlock.structuredData?.price !== undefined ? editingBlock.structuredData.price : ''}
                         onChange={(e) => setEditingBlock({
                           ...editingBlock,
                           structuredData: {
                             ...editingBlock.structuredData,
-                            price: Number(e.target.value)
+                            price: e.target.value !== '' ? Number(e.target.value) : undefined
                           }
                         })}
+                        placeholder="Ej. 300"
                         className="field-input-compact text-emerald-400 font-bold"
                       />
                     </div>
@@ -1458,6 +1570,168 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         className="field-textarea-compact"
                       />
                     </div>
+                  </div>
+                )}
+
+                {/* 🌐 Publicación en Página de Inicio (Carrusel) */}
+                {(editingBlock.category === 'product' || editingBlock.category === 'service') && (
+                  <div className="category-compact-box home-publish-box">
+                    <div className="publish-header-row">
+                      <span className="field-label-compact flex items-center gap-1.5 text-cyan-300">
+                        <Globe size={13} />
+                        <span>🌐 Publicar en Inicio (Carrusel)</span>
+                      </span>
+                      <label className="switch-toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={editingBlock.publishedToHome ?? editingBlock.structuredData?.publishedToHome ?? false}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setEditingBlock({
+                              ...editingBlock,
+                              publishedToHome: val,
+                              structuredData: {
+                                ...editingBlock.structuredData,
+                                publishedToHome: val
+                              }
+                            });
+                          }}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    <div className="left-field-group mt-1">
+                      <label className="field-label-compact">Etiqueta en Carrusel:</label>
+                      <input
+                        type="text"
+                        value={editingBlock.structuredData?.tag || ''}
+                        onChange={(e) => setEditingBlock({
+                          ...editingBlock,
+                          structuredData: {
+                            ...editingBlock.structuredData,
+                            tag: e.target.value
+                          }
+                        })}
+                        placeholder={editingBlock.category === 'product' ? 'Ej. Páginas Web Profesionales' : 'Ej. Bots de Atención'}
+                        className="field-input-compact text-cyan-200"
+                      />
+                    </div>
+
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Imagen para el Carrusel:</label>
+                      <input
+                        type="text"
+                        value={editingBlock.imageUrl || editingBlock.structuredData?.imageUrl || ''}
+                        onChange={(e) => {
+                          const url = e.target.value;
+                          setEditingBlock({
+                            ...editingBlock,
+                            imageUrl: url,
+                            structuredData: {
+                              ...editingBlock.structuredData,
+                              imageUrl: url
+                            }
+                          });
+                        }}
+                        placeholder="Ruta local (/carousel-websites.jpg) o URL web"
+                        className="field-input-compact"
+                      />
+                    </div>
+
+                    {/* Quick Image Presets */}
+                    <div className="image-presets-row">
+                      <span className="text-[10px] text-muted block mb-1">Preajustes rápidos:</span>
+                      <div className="preset-buttons-group">
+                        <button
+                          type="button"
+                          className="btn-preset-img"
+                          onClick={() => {
+                            setEditingBlock({
+                              ...editingBlock,
+                              imageUrl: '/carousel-websites.jpg',
+                              structuredData: {
+                                ...editingBlock.structuredData,
+                                imageUrl: '/carousel-websites.jpg',
+                                tag: editingBlock.structuredData?.tag || 'Páginas Web Profesionales'
+                              }
+                            });
+                          }}
+                          title="Usar imagen de Páginas Web"
+                        >
+                          🌐 Webs
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-preset-img"
+                          onClick={() => {
+                            setEditingBlock({
+                              ...editingBlock,
+                              imageUrl: '/carousel-forms.jpg',
+                              structuredData: {
+                                ...editingBlock.structuredData,
+                                imageUrl: '/carousel-forms.jpg',
+                                tag: editingBlock.structuredData?.tag || 'Formularios Inteligentes'
+                              }
+                            });
+                          }}
+                          title="Usar imagen de Formularios"
+                        >
+                          📋 Form
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-preset-img"
+                          onClick={() => {
+                            setEditingBlock({
+                              ...editingBlock,
+                              imageUrl: '/carousel-apps.jpg',
+                              structuredData: {
+                                ...editingBlock.structuredData,
+                                imageUrl: '/carousel-apps.jpg',
+                                tag: editingBlock.structuredData?.tag || 'Aplicaciones Operativas'
+                              }
+                            });
+                          }}
+                          title="Usar imagen de Apps / POS"
+                        >
+                          💻 Apps
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-preset-img"
+                          onClick={() => {
+                            setEditingBlock({
+                              ...editingBlock,
+                              imageUrl: '/carousel-bots.jpg',
+                              structuredData: {
+                                ...editingBlock.structuredData,
+                                imageUrl: '/carousel-bots.jpg',
+                                tag: editingBlock.structuredData?.tag || 'Bots de Atención'
+                              }
+                            });
+                          }}
+                          title="Usar imagen de Bots"
+                        >
+                          🤖 Bots
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Preview Thumbnail in Modal */}
+                    {(editingBlock.imageUrl || editingBlock.structuredData?.imageUrl) && (
+                      <div className="modal-img-preview-box">
+                        <img
+                          src={editingBlock.imageUrl || editingBlock.structuredData?.imageUrl}
+                          alt="Vista previa"
+                          className="modal-preview-img"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <span className="modal-preview-label">Vista previa en carrusel</span>
+                      </div>
+                    )}
                   </div>
                 )}
 

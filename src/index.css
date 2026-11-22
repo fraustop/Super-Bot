@@ -4885,6 +4885,182 @@ html, body {
   border-left: 3px solid #a855f7;
 }
 
+/* Card Thumbnail Banner */
+.category-card-thumb-banner {
+  width: 100%;
+  height: 125px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.35rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+}
+
+.card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.category-card:hover .card-thumb-img {
+  transform: scale(1.03);
+}
+
+/* Publication Pill in Card */
+.publication-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.publication-pill.published {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.publication-pill.published:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.publication-pill.hidden {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.publication-pill.hidden:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}
+
+/* Home Carousel Section in Modal */
+.category-compact-box.home-publish-box {
+  border-left: 3px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.05);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.publish-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Switch Toggle Slider */
+.switch-toggle-label {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.switch-toggle-label input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: 0.2s;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+.switch-toggle-label input:checked + .toggle-slider {
+  background-color: #10b981;
+  border-color: #10b981;
+}
+
+.switch-toggle-label input:checked + .toggle-slider:before {
+  transform: translateX(18px);
+}
+
+/* Preset Buttons Group */
+.image-presets-row {
+  margin-top: 0.15rem;
+}
+
+.preset-buttons-group {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.btn-preset-img {
+  padding: 0.22rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-preset-img:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--accent-cyan);
+}
+
+/* Modal Image Preview Box */
+.modal-img-preview-box {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+  border: 1px solid var(--border-color);
+  background: #000;
+  position: relative;
+}
+
+.modal-preview-img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+}
+
+.modal-preview-label {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.15rem 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
 .btn-sync-to-prompt {
   width: 100%;
   display: inline-flex;

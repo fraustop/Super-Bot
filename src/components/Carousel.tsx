@@ -8,11 +8,19 @@ import {
   ChevronRight,
   CheckCircle2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Package
 } from 'lucide-react';
 
-interface SlideData {
-  id: number;
+import {
+  subscribeToBotKnowledge,
+  isProductBlock,
+  isServiceBlock,
+  type BotKnowledgeBlock
+} from '../services/botKnowledgeService';
+
+export interface SlideData {
+  id: string | number;
   tag: string;
   badgeIcon: React.ReactNode;
   title: string;
@@ -25,9 +33,9 @@ interface SlideData {
   }[];
 }
 
-const slides: SlideData[] = [
+const FALLBACK_SLIDES: SlideData[] = [
   {
-    id: 1,
+    id: 'slide-1',
     tag: 'Páginas Web Profesionales',
     badgeIcon: <Globe size={16} />,
     title: 'Tu Negocio en Internet con una Web Moderna y Vendedora',
@@ -51,7 +59,7 @@ const slides: SlideData[] = [
     ]
   },
   {
-    id: 2,
+    id: 'slide-2',
     tag: 'Formularios Inteligentes',
     badgeIcon: <FileText size={16} />,
     title: 'Captura de Pedidos y Clientes sin Complicaciones',
@@ -75,7 +83,7 @@ const slides: SlideData[] = [
     ]
   },
   {
-    id: 3,
+    id: 'slide-3',
     tag: 'Aplicaciones Operativas',
     badgeIcon: <LayoutDashboard size={16} />,
     title: 'El Control Diario de tu Negocio en tu Mano',
@@ -99,7 +107,7 @@ const slides: SlideData[] = [
     ]
   },
   {
-    id: 4,
+    id: 'slide-4',
     tag: 'Bots de Atención (Web, WhatsApp y Telegram)',
     badgeIcon: <Bot size={16} />,
     title: 'Respuestas Instantáneas y Cierre de Ventas',
@@ -124,6 +132,74 @@ const slides: SlideData[] = [
   }
 ];
 
+function getSlideIcon(block: BotKnowledgeBlock): React.ReactNode {
+  const text = `${block.structuredData?.tag || ''} ${block.title || ''} ${block.summary || ''}`.toLowerCase();
+  if (text.includes('web') || text.includes('página') || text.includes('pagina') || text.includes('sitio')) {
+    return <Globe size={16} />;
+  }
+  if (text.includes('form') || text.includes('pedido') || text.includes('cotiza') || text.includes('captura')) {
+    return <FileText size={16} />;
+  }
+  if (text.includes('app') || text.includes('pos') || text.includes('mostrador') || text.includes('inventario') || text.includes('operat')) {
+    return <LayoutDashboard size={16} />;
+  }
+  if (text.includes('bot') || text.includes('whatsapp') || text.includes('telegram') || text.includes('asistente') || text.includes('chat')) {
+    return <Bot size={16} />;
+  }
+  return isProductBlock(block) ? <Package size={16} /> : <Sparkles size={16} />;
+}
+
+function blockToSlide(block: BotKnowledgeBlock, index: number): SlideData {
+  const imageUrl = block.imageUrl || block.structuredData?.imageUrl || '/carousel-websites.jpg';
+  const tag =
+    block.structuredData?.tag?.trim() ||
+    (isProductBlock(block) ? 'Producto Digital' : 'Servicio Especializado');
+
+  // Title: prefer publicTitle, then summary if it's punchy, then title
+  const title = block.structuredData?.publicTitle?.trim() || block.summary?.trim() || block.title;
+
+  // Subtitle: use includes, advisorInstructions, or summary
+  let subtitle = '';
+  if (block.structuredData?.advisorInstructions) {
+    subtitle = block.structuredData.advisorInstructions;
+  } else if (block.structuredData?.includes) {
+    subtitle = `Incluye: ${block.structuredData.includes}`;
+  } else {
+    subtitle = block.summary || 'Solución digital lista para operar e impulsar las ventas de tu negocio.';
+  }
+
+  // Utilities list
+  let utilities = block.structuredData?.utilities;
+  if (!utilities || utilities.length === 0) {
+    const includesList = block.structuredData?.includes
+      ? block.structuredData.includes.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    if (includesList.length >= 2) {
+      utilities = includesList.slice(0, 3).map((item) => ({
+        title: item,
+        desc: 'Configurado e integrado a la medida para tu negocio.'
+      }));
+    } else {
+      utilities = [
+        { title: 'Presencia e impacto inmediato', desc: 'Diseñado a la medida para convertir visitantes en clientes.' },
+        { title: 'Atención directa y sin rodeos', desc: 'Canales optimizados con enlace directo a WhatsApp y cotizaciones.' },
+        { title: 'Soporte y acompañamiento', desc: 'Garantía técnica y asistencia para mantener tu solución siempre activa.' }
+      ];
+    }
+  }
+
+  return {
+    id: block.id || `slide-${index + 1}`,
+    tag,
+    badgeIcon: getSlideIcon(block),
+    title,
+    subtitle,
+    image: imageUrl,
+    imageAlt: block.title,
+    utilities
+  };
+}
+
 const ROTATION_INTERVAL = 4500; // 4.5 seconds per card
 
 interface CarouselProps {
@@ -132,25 +208,64 @@ interface CarouselProps {
 }
 
 export const Carousel: React.FC<CarouselProps> = ({ onOpenContact, isChatOpen = false }) => {
+  const [slides, setSlides] = useState<SlideData[]>(FALLBACK_SLIDES);
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
+  // Subscribe in real-time to knowledge blocks from Firestore/Service
+  useEffect(() => {
+    const unsubscribe = subscribeToBotKnowledge((config) => {
+      const blocks = config.knowledgeBlocks || [];
+      const published = blocks.filter(
+        (b) =>
+          b.status !== 'archived' &&
+          (isProductBlock(b) || isServiceBlock(b)) &&
+          (b.publishedToHome === true || b.structuredData?.publishedToHome === true)
+      );
+
+      if (published.length > 0) {
+        setSlides(published.map(blockToSlide));
+      } else {
+        // If all items are temporarily unpublished, display fallback catalog
+        setSlides(FALLBACK_SLIDES);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Ensure currentIndex stays within bounds when slides count changes
+  useEffect(() => {
+    if (slides.length > 0 && currentIndex >= slides.length) {
+      setCurrentIndex(0);
+    }
+  }, [slides.length, currentIndex]);
+
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % slides.length);
+    setSlides((current) => {
+      if (current.length === 0) return current;
+      setCurrentIndex((prev) => (prev + 1) % current.length);
+      return current;
+    });
   }, []);
 
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+    setSlides((current) => {
+      if (current.length === 0) return current;
+      setCurrentIndex((prev) => (prev - 1 + current.length) % current.length);
+      return current;
+    });
   }, []);
 
-  // Continuous auto-rotation every 4.5 seconds
+  // Continuous auto-rotation every 4.5 seconds (only if multiple slides exist)
   useEffect(() => {
+    if (slides.length <= 1) return;
     const timer = setInterval(() => {
       nextSlide();
     }, ROTATION_INTERVAL);
 
     return () => clearInterval(timer);
-  }, [currentIndex, nextSlide]);
+  }, [currentIndex, nextSlide, slides.length]);
 
   // Touch gesture support for mobile devices
   const handleTouchStart = (e: React.TouchEvent) => {

@@ -43,6 +43,8 @@ export interface BotKnowledgeBlock {
   category: BlockCategory;
   summary: string;
   content: string; // The formatted markdown block injected into master prompt
+  imageUrl?: string;
+  publishedToHome?: boolean;
   structuredData?: {
     price?: number;
     adjustmentPrice?: number;
@@ -54,6 +56,11 @@ export interface BotKnowledgeBlock {
     ruleType?: string; // For instructions (Tono, Restricción, Redirección)
     additionalPackages?: string;
     advisorInstructions?: string;
+    imageUrl?: string;
+    publishedToHome?: boolean;
+    tag?: string;
+    publicTitle?: string;
+    utilities?: { title: string; desc: string }[];
     [key: string]: any;
   };
   status: 'active' | 'archived';
@@ -79,7 +86,9 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     id: 'block-prod-web-basic',
     title: 'Página Web Sencilla Express ($300 MXN)',
     category: 'product',
-    summary: 'Página web moderna de 1 sección para presencia digital inmediata, optimizada para celulares y con botón directo a WhatsApp.',
+    summary: 'Tu Negocio en Internet con una Web Moderna y Vendedora',
+    imageUrl: '/carousel-websites.jpg',
+    publishedToHome: true,
     content: `### PRODUCTO OFICIAL: PÁGINA WEB SENCILLA EXPRESS ($300 MXN)
 
 - **Costo base oficial:** $300 MXN (pago único inicial, sin mensualidades forzosas).
@@ -96,7 +105,52 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       deliveryFormat: 'Despliegue web en 24-48 hrs',
       includes: '1 sección responsiva, hosting cloud SSL, botón directo a WhatsApp, formulario',
       additionalPackages: 'Póliza de ajustes posteriores por $100 MXN c/u',
-      advisorInstructions: 'Presentar como la opción más económica y rápida para empezar a vender en internet hoy mismo.'
+      advisorInstructions: 'Presentar como la opción más económica y rápida para empezar a vender en internet hoy mismo.',
+      imageUrl: '/carousel-websites.jpg',
+      publishedToHome: true,
+      tag: 'Páginas Web Profesionales',
+      utilities: [
+        { title: 'Presencia digital de alto impacto', desc: 'Destaca frente a tus competidores con un diseño a la medida, confiable y accesible desde cualquier dispositivo.' },
+        { title: 'Diseñada para convertir y vender', desc: 'Estructura clara con botones directos a WhatsApp, cotizadores y llamadas a la acción sin rodeos.' },
+        { title: 'Velocidad ultra rápida y optimizada', desc: 'Carga instantánea con código ágil y moderno para que tus clientes locales te encuentren sin demoras.' }
+      ]
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+  {
+    id: 'block-prod-form',
+    title: 'Formulario Inteligente de Pedidos y Cotizaciones ($400 MXN)',
+    category: 'product',
+    summary: 'Captura de Pedidos y Clientes sin Complicaciones',
+    imageUrl: '/carousel-forms.jpg',
+    publishedToHome: true,
+    content: `### PRODUCTO OFICIAL: FORMULARIO INTELIGENTE DE PEDIDOS ($400 MXN)
+
+- **Costo base oficial:** $400 MXN (pago único inicial).
+- **Formato de entrega:** Enlace web público personalizado o integrado directamente en la página web del cliente.
+- **Qué incluye:**
+  - Validación de datos en tiempo real (nombre, teléfono a 10 dígitos, dirección, opciones seleccionadas).
+  - Cotizador automático integrado que suma productos, paquetes o costos de envío al instante.
+  - Envío automático del resumen del pedido directo al WhatsApp del dueño del negocio y al correo del cliente.
+  - Cero margen de error en pedidos y atención 24 horas aunque el negocio esté cerrado.
+- **Consigna para el Asesor:** Recomendar a negocios que venden productos por catálogo, servicios con cotizaciones personalizadas o restaurantes/reposterías que reciben pedidos por redes sociales.`,
+    structuredData: {
+      price: 400,
+      deliveryFormat: 'Enlace web personalizado o embebido en sitio web',
+      includes: 'Validación automática de campos, cálculo de presupuestos, reenvío a WhatsApp y correo',
+      additionalPackages: 'Integración con base de datos en tiempo real por $300 MXN/mes',
+      advisorInstructions: 'Presentar como la mejor forma de recibir pedidos organizados sin errores ni tiempo perdido en chats.',
+      imageUrl: '/carousel-forms.jpg',
+      publishedToHome: true,
+      tag: 'Formularios Inteligentes',
+      utilities: [
+        { title: 'Recepción 24/7 sin esperas', desc: 'Tus clientes pueden cotizar o enviar sus pedidos en cualquier momento sin perder la venta.' },
+        { title: 'Cero errores de captura', desc: 'La información se valida en tiempo real y se envía directo a tu base de datos o correo.' },
+        { title: 'Sin software costoso', desc: 'Una solución directa y a la medida que reemplaza procesos en papel o mensajes desordenados.' }
+      ]
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -107,7 +161,9 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     id: 'block-prod-app-pos',
     title: 'Aplicación Web Estática / POS Mostrador ($500 MXN)',
     category: 'product',
-    summary: 'Software para 1 computadora de mostrador: registro de ventas, control de inventario y cobro ágil sin mensualidad de servidor.',
+    summary: 'El Control Diario de tu Negocio en tu Mano',
+    imageUrl: '/carousel-apps.jpg',
+    publishedToHome: true,
     content: `### PRODUCTO OFICIAL: APLICACIÓN WEB ESTÁTICA / POS MOSTRADOR ($500 MXN)
 
 - **Costo base oficial:** $500 MXN (licencia local de pago único para 1 equipo).
@@ -124,34 +180,15 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       deliveryFormat: 'Instalación y configuración local para 1 equipo',
       includes: 'Punto de venta, control de inventario local, registro de ventas diarias, reportes',
       additionalPackages: 'Sincronización multi-dispositivo en la nube por $300 MXN/mes',
-      advisorInstructions: 'Ideal para negocios locales que quieren cobrar rápido y controlar inventario sin mensualidades.'
-    },
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    authorEmail: 'sistema@superbot.ai'
-  },
-  {
-    id: 'block-prod-form',
-    title: 'Formulario Inteligente de Pedidos y Cotizaciones ($400 MXN)',
-    category: 'product',
-    summary: 'Formulario web interactivo que valida datos del cliente, calcula presupuestos en tiempo real y envía el pedido a WhatsApp y correo.',
-    content: `### PRODUCTO OFICIAL: FORMULARIO INTELIGENTE DE PEDIDOS ($400 MXN)
-
-- **Costo base oficial:** $400 MXN (pago único inicial).
-- **Formato de entrega:** Enlace web público personalizado o integrado directamente en la página web del cliente.
-- **Qué incluye:**
-  - Validación de datos en tiempo real (nombre, teléfono a 10 dígitos, dirección, opciones seleccionadas).
-  - Cotizador automático integrado que suma productos, paquetes o costos de envío al instante.
-  - Envío automático del resumen del pedido directo al WhatsApp del dueño del negocio y al correo del cliente.
-  - Cero margen de error en pedidos y atención 24 horas aunque el negocio esté cerrado.
-- **Consigna para el Asesor:** Recomendar a negocios que venden productos por catálogo, servicios con cotizaciones personalizadas o restaurantes/reposterías que reciben pedidos por redes sociales.`,
-    structuredData: {
-      price: 400,
-      deliveryFormat: 'Enlace web personalizado o embebido en sitio web',
-      includes: 'Validación automática de campos, cálculo de presupuestos, reenvío a WhatsApp y correo',
-      additionalPackages: 'Integración con base de datos en tiempo real por $300 MXN/mes',
-      advisorInstructions: 'Presentar como la mejor forma de recibir pedidos organizados sin errores ni tiempo perdido en chats.'
+      advisorInstructions: 'Ideal para negocios locales que quieren cobrar rápido y controlar inventario sin mensualidades.',
+      imageUrl: '/carousel-apps.jpg',
+      publishedToHome: true,
+      tag: 'Aplicaciones Operativas',
+      utilities: [
+        { title: 'Inventario y stock al instante', desc: 'Conoce exactamente qué productos tienes disponibles y recibe alertas de reabastecimiento.' },
+        { title: 'Punto de venta ágil', desc: 'Registra cobros, métodos de pago y pedidos de tus clientes en pocos segundos.' },
+        { title: 'Métricas claras y útiles', desc: 'Visualiza cuánto has vendido hoy y qué productos son los favoritos de tus clientes.' }
+      ]
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -164,7 +201,9 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     id: 'block-serv-bot-monthly',
     title: 'Renta Mensual de Bot Inteligente Multicanal ($1,000 MXN/mes)',
     category: 'service',
-    summary: 'Asistente virtual 24/7 con IA en WhatsApp Cloud API, Telegram y Web montado en capas gratuitas oficiales.',
+    summary: 'Respuestas Instantáneas y Cierre de Ventas',
+    imageUrl: '/carousel-bots.jpg',
+    publishedToHome: true,
     content: `### SERVICIO OFICIAL: RENTA DE BOT INTELIGENTE MULTICANAL ($1,000 MXN/MES)
 
 - **Tarifa oficial:** $1,000 MXN mensuales (sin plazos forzosos de permanencia).
@@ -181,7 +220,15 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       frequency: 'Mensual recurrente',
       channels: 'WhatsApp Cloud API, Telegram, Sitio Web',
       includes: 'Atención 24/7, cotización automática, filtro y traspaso a llamada/WhatsApp, mantenimiento continuo',
-      advisorInstructions: 'Comparar con el costo de un sueldo o recepcionista. Resaltar atención 24/7 sin perder ventas.'
+      advisorInstructions: 'Comparar con el costo de un sueldo o recepcionista. Resaltar atención 24/7 sin perder ventas.',
+      imageUrl: '/carousel-bots.jpg',
+      publishedToHome: true,
+      tag: 'Bots de Atención (Web, WhatsApp y Telegram)',
+      utilities: [
+        { title: 'Atención en WhatsApp y Telegram', desc: 'Responde automáticamente en las apps de mensajería más usadas por tus clientes.' },
+        { title: 'Preguntas frecuentes resueltas al segundo', desc: 'Horarios, catálogos, formas de entrega, métodos de pago y detalles de tus servicios.' },
+        { title: 'Pase a humano cuando toque cerrar', desc: 'El bot califica el interés y te avisa cuando el cliente requiere confirmación personalizada.' }
+      ]
     },
     status: 'active',
     createdAt: new Date().toISOString(),
