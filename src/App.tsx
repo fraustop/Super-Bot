@@ -76,14 +76,14 @@ export const App: React.FC = () => {
     setClientViewMode('portal');
   };
 
-  const handleMockLogin = (mockUser: { displayName: string; email: string }) => {
-    const user: AppUser = {
-      displayName: mockUser.displayName,
-      email: mockUser.email
+  const handleLoginSuccess = (user: { displayName: string | null; email: string | null }) => {
+    const appUser: AppUser = {
+      displayName: user.displayName,
+      email: user.email
     };
-    setCurrentUser(user);
-    saveLocalSessionUser(user);
-    if (user.email?.toLowerCase() === 'gffraustop@gmail.com') {
+    setCurrentUser(appUser);
+    saveLocalSessionUser(appUser);
+    if (appUser.email?.toLowerCase() === 'gffraustop@gmail.com') {
       setAdminViewMode('admin');
     } else {
       setClientViewMode('portal');
@@ -185,7 +185,7 @@ export const App: React.FC = () => {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        onMockLogin={handleMockLogin}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );
