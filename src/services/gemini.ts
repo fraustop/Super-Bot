@@ -79,6 +79,14 @@ ESQUEMA OFICIAL DE COSTOS Y RANGOS EN VIVO:
    - Pueden tener costos adicionales variables según volumen de almacenamiento o infraestructura requerida.
 
 ${kb.customNotes ? `\nNOTAS Y PROMOCIONES ACTIVAS DEL ADMINISTRADOR:\n${kb.customNotes}\n` : ''}
+${
+  kb.knowledgeBlocks && kb.knowledgeBlocks.length > 0
+    ? `\nOBJETOS Y PAQUETES MAESTROS CONFIGURADOS POR EL ENTRENADOR (FIRESTORE):\n${kb.knowledgeBlocks
+        .filter((b) => b.status === 'active')
+        .map((b, i) => `${i + 1}. [${b.category.toUpperCase()}] ${b.title}:\n   ${b.content}`)
+        .join('\n\n')}\n`
+    : ''
+}
 
 INFORMACIÓN DETALLADA DE CUOTAS DE IA, SERVIDORES Y PROVEEDORES EN LA NUBE:
 * Inteligencia Artificial (Google Gemini 1.5 Flash):
