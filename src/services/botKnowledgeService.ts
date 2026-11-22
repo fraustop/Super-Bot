@@ -26,10 +26,21 @@ export interface BotRulesConfig {
   selfBuildRedirectGemini: boolean;
 }
 
+export type BlockCategory =
+  | 'product'
+  | 'service'
+  | 'instruction'
+  | 'package'
+  | 'pricing'
+  | 'promotion'
+  | 'quota'
+  | 'rule'
+  | 'custom';
+
 export interface BotKnowledgeBlock {
   id: string;
   title: string;
-  category: 'package' | 'pricing' | 'promotion' | 'quota' | 'rule' | 'custom';
+  category: BlockCategory;
   summary: string;
   content: string; // The formatted markdown block injected into master prompt
   structuredData?: {
@@ -37,6 +48,10 @@ export interface BotKnowledgeBlock {
     adjustmentPrice?: number;
     monthlyPrice?: number;
     includes?: string;
+    deliveryFormat?: string; // For products (e.g. Instalación local, Entrega web)
+    frequency?: string; // For services (e.g. Mensual, Por ajuste)
+    channels?: string; // For services (WhatsApp, Web, etc.)
+    ruleType?: string; // For instructions (Tono, Restricción, Redirección)
     additionalPackages?: string;
     advisorInstructions?: string;
     [key: string]: any;
@@ -59,17 +74,18 @@ export interface BotKnowledgeConfig {
 }
 
 export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
+  // 1. PRODUCTOS
   {
-    id: 'block-web-basic',
+    id: 'block-prod-web-basic',
     title: 'Página Web Sencilla ($300 MXN)',
-    category: 'package',
-    summary: 'Página de 1 sola sección con hosting en la nube y botón directo a WhatsApp.',
-    content: 'PÁGINA WEB SENCILLA: Desde $300 MXN (pago único inicial). Incluye diseño responsivo de 1 sección, alojamiento en la nube de alta velocidad con candado SSL y botón directo a WhatsApp. Mantenimiento y modificaciones: $100 MXN por cada ajuste solicitado posterior.',
+    category: 'product',
+    summary: 'Página web de 1 sola sección para presencia digital inmediata con botón a WhatsApp.',
+    content: 'PRODUCTO - PÁGINA WEB SENCILLA: $300 MXN (pago único inicial). Incluye diseño responsivo de 1 sección, alojamiento en la nube de alta velocidad con candado SSL y botón directo a WhatsApp. Entrega inmediata.',
     structuredData: {
       price: 300,
-      adjustmentPrice: 100,
+      deliveryFormat: 'Despliegue web inmediato',
       includes: '1 sección responsiva, hosting cloud SSL, botón directo a WhatsApp',
-      additionalPackages: 'Ajustes posteriores por $100 MXN c/u'
+      additionalPackages: 'Póliza de ajustes posteriores por $100 MXN c/u'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -77,15 +93,15 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     authorEmail: 'sistema@superbot.ai'
   },
   {
-    id: 'block-app-pos',
+    id: 'block-prod-app-pos',
     title: 'Aplicación Web Estática POS ($500 MXN)',
-    category: 'package',
-    summary: 'Herramienta para mostrador, inventario y cobro rápido en 1 computadora local.',
-    content: 'APLICACIÓN WEB ESTÁTICA POS: $500 MXN. Diseñada para operar en 1 sola computadora de mostrador para registro de productos, inventario y cobro sin mensualidad de servidor. Funciones de backend o nube opcionales desde $300 MXN/mes.',
+    category: 'product',
+    summary: 'Software para 1 computadora de mostrador para registro de productos, inventario y cobro.',
+    content: 'PRODUCTO - APLICACIÓN WEB ESTÁTICA POS: $500 MXN (licencia local). Diseñada para operar en mostrador sin mensualidad de servidor. Control de productos, inventario básico y cobro ágil en caja.',
     structuredData: {
       price: 500,
-      monthlyPrice: 300,
-      includes: 'Control de inventario, punto de venta local para 1 PC',
+      deliveryFormat: 'Instalación local en 1 equipo',
+      includes: 'Control de inventario, punto de venta local, catálogo de productos',
       additionalPackages: 'Sincronización en la nube desde $300 MXN/mes'
     },
     status: 'active',
@@ -94,16 +110,34 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     authorEmail: 'sistema@superbot.ai'
   },
   {
-    id: 'block-bot-monthly',
-    title: 'Bot de Atención Inteligente ($1,000 MXN/mes)',
-    category: 'package',
+    id: 'block-prod-form',
+    title: 'Formulario Inteligente de Pedidos ($400 MXN)',
+    category: 'product',
+    summary: 'Formulario web validado para recepción de pedidos y solicitudes 24/7.',
+    content: 'PRODUCTO - FORMULARIO INTELIGENTE: $400 MXN (pago único). Valida datos del cliente, calcula presupuestos y envía la orden directa al correo o WhatsApp del negocio.',
+    structuredData: {
+      price: 400,
+      deliveryFormat: 'Enlace web directo integrado',
+      includes: 'Validación en vivo de datos, cotización autónoma, envío a WhatsApp/correo'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+
+  // 2. SERVICIOS
+  {
+    id: 'block-serv-bot-monthly',
+    title: 'Renta Mensual de Bot Inteligente ($1,000 MXN/mes)',
+    category: 'service',
     summary: 'Asistente 24/7 en WhatsApp, Telegram y Web en capas gratuitas de nube.',
-    content: 'BOTS DE ATENCIÓN INTELIGENTE: Renta de $1,000 MXN mensuales. Se configuran en las capas gratuitas (Free Tiers) de Google Gemini (hasta 1,500 mensajes/día gratis) y WhatsApp Cloud API (1,000 conversaciones/mes gratis). Resuelven dudas 24/7 y cierran ventas.',
+    content: 'SERVICIO - BOTS DE ATENCIÓN INTELIGENTE: $1,000 MXN/mes de renta recurrente. Atención 24/7 en WhatsApp, Telegram y Web. Se monta en Free Tiers de Google Gemini (hasta 1,500 mensajes/día gratis) y WhatsApp (1,000 conversaciones/mes gratis).',
     structuredData: {
       monthlyPrice: 1000,
-      geminiDailyFree: 1500,
-      whatsappMonthlyFree: 1000,
-      includes: 'Atención 24/7 en WhatsApp, Telegram y Web'
+      frequency: 'Mensual recurrente',
+      channels: 'WhatsApp Cloud API, Telegram, Sitio Web',
+      includes: 'Atención 24/7, resolución de dudas, filtro de clientes y traspaso a asesor'
     },
     status: 'active',
     createdAt: new Date().toISOString(),
@@ -111,11 +145,94 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
     authorEmail: 'sistema@superbot.ai'
   },
   {
-    id: 'block-rule-sales',
-    title: 'Regla: Cero Tecnicismos y Actitud de Venta',
-    category: 'rule',
-    summary: 'Explicar siempre en lenguaje de beneficios reales y evitar términos de ingeniería.',
-    content: 'REGLA DE VENTAJE Y LENGUAJE: Hablar siempre en términos cotidianos de negocio (más clientes, ahorro de tiempo, presencia 24/7, candadito de seguridad). Evitar tecnicismos (latencias, RAM, tokens, webhooks, microservicios) a menos que el cliente pregunte puntualmente por un dato técnico.',
+    id: 'block-serv-web-maintenance',
+    title: 'Póliza de Ajustes y Mantenimiento Web ($100 MXN/ajuste)',
+    category: 'service',
+    summary: 'Modificaciones y actualizaciones de textos, fotos o precios en sitios web.',
+    content: 'SERVICIO - AJUSTES Y MANTENIMIENTO: $100 MXN por cada cambio o ajuste solicitado. Actualización de promociones, cambios de fotos, teléfonos o catálogos.',
+    structuredData: {
+      adjustmentPrice: 100,
+      frequency: 'Por evento / solicitud',
+      includes: 'Actualización de textos, fotos, precios o enlaces en 24 hrs'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+  {
+    id: 'block-serv-cloud-sync',
+    title: 'Sincronización Cloud y Respaldo ($300 MXN/mes)',
+    category: 'service',
+    summary: 'Infraestructura de base de datos NoSQL y respaldo en la nube para apps operativas.',
+    content: 'SERVICIO - INFRAESTRUCTURA CLOUD: Desde $300 MXN/mes. Respaldo en tiempo real en Firestore, acceso multi-dispositivo y seguridad en la nube.',
+    structuredData: {
+      monthlyPrice: 300,
+      frequency: 'Mensual recurrente',
+      includes: 'Base de datos NoSQL, respaldo continuo, sincronización entre dispositivos'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+
+  // 3. INSTRUCCIONES AL BOT
+  {
+    id: 'block-inst-no-jargon',
+    title: 'Regla: Cero Tecnicismos (Beneficios Reales)',
+    category: 'instruction',
+    summary: 'Hablar en lenguaje cotidiano de negocio y evitar tecnicismos de ingeniería.',
+    content: 'INSTRUCCIÓN AL ASESOR - CERO TECNICISMOS: Prohibido usar tecnicismos (latencias, RAM, tokens, webhooks, microservicios, arquitecturas) a menos que el cliente pregunte puntualmente por un dato técnico. Hablar siempre de más ventas, tiempo libre, rapidez en celulares y candadito de seguridad.',
+    structuredData: {
+      ruleType: 'Tono y Lenguaje',
+      advisorInstructions: 'Traducir especificaciones técnicas en beneficios tangibles para el negocio del cliente.'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+  {
+    id: 'block-inst-sales-cta',
+    title: 'Consigna: Actitud de Vendedor Empático con CTA',
+    category: 'instruction',
+    summary: 'Responder con entusiasmo, seguridad y cerrar con una pregunta de avance comercial.',
+    content: 'INSTRUCCIÓN AL ASESOR - ACTITUD DE VENTA: Actuar siempre como un vendedor profesional y seguro. Cada respuesta explicativa o de cotización debe concluir con un llamado a la acción comercial (ej. "¿Qué te parece esta opción para tu negocio?", "¿Quieres que iniciemos con tu proyecto?").',
+    structuredData: {
+      ruleType: 'Actitud Comercial',
+      advisorInstructions: 'Siempre cerrar con una pregunta de enganche comercial o llamado a la acción.'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+  {
+    id: 'block-inst-redirect-gemini',
+    title: 'Redirección: Auto-construcción con Google Gemini',
+    category: 'instruction',
+    summary: 'Si el cliente quiere hacer su página él mismo, redirigirlo a Gemini y ofrecer apoyo.',
+    content: 'INSTRUCCIÓN AL ASESOR - REDIRECCIÓN A GEMINI: Si el cliente pregunta si puede hacer la página él mismo, explicarle con entusiasmo que la IA puede guiarlo y proporcionarle el enlace https://gemini.google.com en otra pestaña. Recordarle con simpatía que si prefiere ahorrar tiempo nosotros se la entregamos lista desde $300 MXN.',
+    structuredData: {
+      ruleType: 'Redirección Asistida',
+      advisorInstructions: 'Facilitar https://gemini.google.com y recordar la opción llave en mano de SuperBot.'
+    },
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    authorEmail: 'sistema@superbot.ai'
+  },
+  {
+    id: 'block-inst-autonomous-quoting',
+    title: 'Consigna: Motor Autónomo de Cotizaciones',
+    category: 'instruction',
+    summary: 'Calcular cotizaciones de inmediato desglosando pagos iniciales y recurrentes.',
+    content: 'INSTRUCCIÓN AL ASESOR - COTIZACIÓN AUTÓNOMA: Calcular presupuestos inmediatamente desglosando costo único y costo mensual. Mostrar siempre el comparativo frente a lo que cobra la competencia en el mercado para evidenciar el ahorro que obtiene con SuperBot.',
+    structuredData: {
+      ruleType: 'Cotización Inmediata',
+      advisorInstructions: 'Desglosar pago inicial y mensual, comparando con agencias tradicionales.'
+    },
     status: 'active',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -146,7 +263,7 @@ export const DEFAULT_BOT_KNOWLEDGE: BotKnowledgeConfig = {
   updatedBy: 'system'
 };
 
-const STORAGE_KEY = 'superbot_cached_knowledge_v2';
+const STORAGE_KEY = 'superbot_cached_knowledge_v3';
 const KNOWLEDGE_DOC_PATH = { collection: 'bot_knowledge', docId: 'active_config' };
 
 // In-memory active configuration
@@ -173,9 +290,21 @@ export function getActiveBotKnowledge(): BotKnowledgeConfig {
   return currentActiveConfig;
 }
 
+// Category filter helpers
+export function isProductBlock(block: BotKnowledgeBlock): boolean {
+  return block.category === 'product' || (block.category === 'package' && (!block.structuredData?.monthlyPrice || block.structuredData?.price !== undefined));
+}
+
+export function isServiceBlock(block: BotKnowledgeBlock): boolean {
+  return block.category === 'service' || (block.category === 'package' && Boolean(block.structuredData?.monthlyPrice)) || block.category === 'quota';
+}
+
+export function isInstructionBlock(block: BotKnowledgeBlock): boolean {
+  return block.category === 'instruction' || block.category === 'rule';
+}
+
 /**
  * Real-time subscription to Firestore bot knowledge document.
- * Keeps the bot advisor instantly updated without re-deploying!
  */
 export function subscribeToBotKnowledge(
   callback: (config: BotKnowledgeConfig) => void
@@ -212,7 +341,6 @@ export function subscribeToBotKnowledge(
           }
           callback(currentActiveConfig);
         } else {
-          // Initialize in Firestore if doesn't exist
           saveBotKnowledgeToFirestore(DEFAULT_BOT_KNOWLEDGE, 'init');
         }
       },
@@ -298,18 +426,15 @@ export async function addOrUpdateKnowledgeBlock(
     newBlocks.unshift(finalBlock);
   }
 
-  // Update base pricing if structured data specifies pricing
+  // Synchronize numerical pricing if specified in block
   const newPricing = { ...currentActiveConfig.pricing };
   if (finalBlock.structuredData?.price) {
     const p = finalBlock.structuredData.price;
-    const cat = finalBlock.category;
     const text = (finalBlock.title + ' ' + finalBlock.content).toLowerCase();
-    if (cat === 'package' || cat === 'pricing') {
-      if (text.includes('web') || text.includes('página') || text.includes('pagina')) {
-        newPricing.webBasic = p;
-      } else if (text.includes('app') || text.includes('pos')) {
-        newPricing.appStatic = p;
-      }
+    if (text.includes('web') || text.includes('página') || text.includes('pagina')) {
+      newPricing.webBasic = p;
+    } else if (text.includes('app') || text.includes('pos')) {
+      newPricing.appStatic = p;
     }
   }
   if (finalBlock.structuredData?.adjustmentPrice) {
@@ -335,7 +460,6 @@ export async function addOrUpdateKnowledgeBlock(
 
   const saveRes = await saveBotKnowledgeToFirestore(updatedConfig, userEmail);
 
-  // Also write individual block document in collection 'bot_knowledge_blocks'
   if (db) {
     try {
       const blockDocRef = doc(db, 'bot_knowledge_blocks', finalBlock.id);
@@ -385,7 +509,7 @@ export async function deleteKnowledgeBlock(
 }
 
 // ============================================================================
-// Interactive Coach / Trainer Bot Engine
+// Interactive Coach / Trainer Bot Engine (Products, Services, Instructions)
 // ============================================================================
 
 export interface TrainerChatMessage {
@@ -397,14 +521,15 @@ export interface TrainerChatMessage {
 }
 
 /**
- * Intelligent Coach engine that asks questions to complete a profile of changes
- * and constructs the ready-to-commit master document block.
+ * Intelligent Coach engine that adapts questions depending on whether
+ * we are configuring a PRODUCT, a SERVICE, or an INSTRUCTION.
  */
 export async function interactWithTrainerBot(
   userInput: string,
   history: TrainerChatMessage[],
   _currentConfig: BotKnowledgeConfig,
-  adminEmail: string
+  adminEmail: string,
+  targetFocus?: 'product' | 'service' | 'instruction'
 ): Promise<{
   replyText: string;
   proposedBlock?: BotKnowledgeBlock | null;
@@ -412,181 +537,215 @@ export async function interactWithTrainerBot(
   const text = userInput.trim();
   const lower = text.toLowerCase();
 
-  // Find previous context in chat history to know if the admin is answering our questions
+  // Detect category from explicit focus or text keywords
+  let category: 'product' | 'service' | 'instruction' = targetFocus || 'product';
+  if (
+    lower.includes('servicio') ||
+    lower.includes('renta') ||
+    lower.includes('mensual') ||
+    lower.includes('mantenimiento') ||
+    lower.includes('póliza') ||
+    lower.includes('cloud') ||
+    lower.includes('bot de whatsapp')
+  ) {
+    category = 'service';
+  } else if (
+    lower.includes('instruccion') ||
+    lower.includes('instrucción') ||
+    lower.includes('regla') ||
+    lower.includes('consigna') ||
+    lower.includes('tono') ||
+    lower.includes('vendedor') ||
+    lower.includes('tecnicismo') ||
+    lower.includes('evita') ||
+    lower.includes('redireccion') ||
+    lower.includes('gemini')
+  ) {
+    category = 'instruction';
+  } else if (
+    lower.includes('producto') ||
+    lower.includes('precio') ||
+    lower.includes('app local') ||
+    lower.includes('pos') ||
+    lower.includes('plantilla') ||
+    lower.includes('formulario') ||
+    lower.includes('pagina') ||
+    lower.includes('página') ||
+    lower.includes('pesos')
+  ) {
+    category = 'product';
+  }
+
+  // Check if admin is answering questions from previous turn
   const lastTrainerMsg = [...history].reverse().find(m => m.sender === 'trainer');
   const isAnsweringQuestions = Boolean(
     lastTrainerMsg && (
       lastTrainerMsg.text.includes('?') ||
       lastTrainerMsg.text.includes('1.') ||
-      lastTrainerMsg.text.includes('¿Qué incluye') ||
-      lastTrainerMsg.text.includes('indícame')
+      lastTrainerMsg.text.includes('indícame') ||
+      lastTrainerMsg.text.includes('¿Qué') ||
+      lastTrainerMsg.text.includes('¿Cuál')
     )
   );
 
-  // Extract numbers (e.g. 300, 500, 100)
   const numbers = lower.match(/\d+[\d,]*/g)?.map((n) => parseInt(n.replace(/,/g, ''), 10)) || [];
   const primaryNumber = numbers.length > 0 ? numbers[0] : null;
 
-  // STEP 1: Admin is answering previous clarifying questions
+  // --------------------------------------------------------------------------
+  // CASE 1: Admin is answering previous interview questions
+  // --------------------------------------------------------------------------
   if (isAnsweringQuestions && history.length >= 2) {
     const firstAdminMsg = history.find(m => m.sender === 'admin')?.text || '';
     const combinedContext = `${firstAdminMsg} | Respuesta: ${text}`;
     const combinedLower = combinedContext.toLowerCase();
-
-    // Determine target price
     const combinedNumbers = combinedLower.match(/\d+[\d,]*/g)?.map((n) => parseInt(n.replace(/,/g, ''), 10)) || [];
     const mainPrice = combinedNumbers.length > 0 ? combinedNumbers[0] : (primaryNumber || 300);
 
-    // Identify details from the user's answer
-    const includesText = text.replace(/^(incluye:?|es|tiene)/i, '').trim();
-
-    // Secondary prices (e.g. ajustes por 100, bot por 500)
-    let adjustmentPrice = 100;
-    let botExtraPrice = 500;
-    if (combinedNumbers.length > 1) {
-      adjustmentPrice = combinedNumbers[1];
-    }
-    if (combinedNumbers.length > 2) {
-      botExtraPrice = combinedNumbers[2];
-    }
-
     const blockId = `block-${Date.now().toString(36)}`;
-    const isWeb = combinedLower.includes('web') || combinedLower.includes('pagina') || combinedLower.includes('página') || mainPrice <= 400;
 
-    const title = isWeb
-      ? `Paquete Web Básico ($${mainPrice} MXN)`
-      : `Solución Comercial Personalizada ($${mainPrice} MXN)`;
+    // Build block according to category
+    if (category === 'instruction') {
+      const title = text.length > 40 ? `Consigna: ${text.slice(0, 35)}...` : `Consigna: ${text}`;
+      const content = `INSTRUCCIÓN AL ASESOR:\n- Directriz: ${text}\n- Objetivo: Mejorar la experiencia y conversión de clientes.\n- Regla: Aplicar en todas las interacciones comerciales del Bot Asesor.`;
 
-    const structuredData: Record<string, any> = {
-      price: mainPrice,
-      adjustmentPrice: adjustmentPrice,
-      includes: includesText || 'Diseño responsivo de 1 sección, botón directo a WhatsApp y hosting en la nube.',
-      additionalPackages: `Ajustes posteriores por $${adjustmentPrice} MXN c/u. Bot de atención adicional por $${botExtraPrice} MXN/mes.`,
-      advisorInstructions: `Ofrecer con entusiasmo a emprendedores y negocios locales. Enfatizar que por $${mainPrice} MXN obtienen presencia digital profesional lista para vender, y sugerir como adicional el bot o ajustes.`
-    };
+      const proposedBlock: BotKnowledgeBlock = {
+        id: blockId,
+        title,
+        category: 'instruction',
+        summary: `Instrucción de comportamiento: ${text.slice(0, 80)}...`,
+        content,
+        structuredData: {
+          ruleType: 'Comportamiento y Ventas',
+          advisorInstructions: text
+        },
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        authorEmail: adminEmail
+      };
 
-    const contentMarkdown = `### ${title.toUpperCase()}\n` +
-      `- Costo base: $${mainPrice} MXN (pago único inicial).\n` +
-      `- Incluye: ${structuredData.includes}\n` +
-      `- Paquetes complementarios / Adicionales: ${structuredData.additionalPackages}\n` +
-      `- Consigna para el Bot Asesor: ${structuredData.advisorInstructions}`;
+      return {
+        replyText: `¡Excelente! He configurado la **Instrucción al Bot** a partir de tu indicación.\n\nRevisa el bloque propuesto a continuación y haz clic en **"Confirmar y Subir a Firestore"** para agregarlo a la pestaña de **Instrucciones al Bot** y al documento maestro en vivo.`,
+        proposedBlock
+      };
+    } else if (category === 'service') {
+      const isMonthly = combinedLower.includes('mensual') || combinedLower.includes('mes') || mainPrice >= 500;
+      const title = isMonthly
+        ? `Servicio de Bot / Nube ($${mainPrice} MXN/mes)`
+        : `Servicio de Mantenimiento ($${mainPrice} MXN)`;
 
-    const proposedBlock: BotKnowledgeBlock = {
-      id: blockId,
-      title,
-      category: 'package',
-      summary: `Paquete configurado a $${mainPrice} MXN con ${structuredData.includes.slice(0, 75)}...`,
-      content: contentMarkdown,
-      structuredData,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorEmail: adminEmail
-    };
+      const frequency = isMonthly ? 'Mensual recurrente' : 'Por evento / ajuste';
+      const includes = text.replace(/^(incluye:?|es|tiene)/i, '').trim() || 'Atención en WhatsApp y Web 24/7 con IA';
 
-    return {
-      replyText: `¡Excelente! He compilado el perfil completo de cambios a partir de tus respuestas.\n\nA continuación tienes el **bloque propuesto** que se incorporará a los documentos maestros de Firestore. Revisa los detalles en la tarjeta y haz clic en **"Confirmar y Subir a Firestore"** para que el Bot Asesor empiece a cotizarlo de inmediato.`,
-      proposedBlock
-    };
+      const content = `SERVICIO - ${title.toUpperCase()}:\n- Tarifa: $${mainPrice} MXN (${frequency}).\n- Alcance: ${includes}\n- Canales: WhatsApp Cloud API y Web.\n- Consigna para el Asesor: Ofrecer como solución continua para que el negocio nunca pierda un cliente.`;
+
+      const proposedBlock: BotKnowledgeBlock = {
+        id: blockId,
+        title,
+        category: 'service',
+        summary: `Servicio con tarifa de $${mainPrice} MXN (${frequency}): ${includes.slice(0, 60)}...`,
+        content,
+        structuredData: {
+          monthlyPrice: isMonthly ? mainPrice : undefined,
+          adjustmentPrice: !isMonthly ? mainPrice : undefined,
+          frequency,
+          includes,
+          advisorInstructions: `Ofrecer a clientes que buscan atención continua o mantenimiento sin esfuerzo.`
+        },
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        authorEmail: adminEmail
+      };
+
+      return {
+        replyText: `¡Perfecto! He estructurado el **Servicio** con tus respuestas.\n\nA continuación tienes el bloque propuesto para la pestaña de **Servicios**. Haz clic en **"Confirmar y Subir a Firestore"** para subirlo al documento maestro.`,
+        proposedBlock
+      };
+    } else {
+      // PRODUCT
+      const isWeb = combinedLower.includes('web') || combinedLower.includes('pagina') || combinedLower.includes('página') || mainPrice <= 400;
+      const title = isWeb
+        ? `Paquete Web Básico ($${mainPrice} MXN)`
+        : `Producto de Software / App ($${mainPrice} MXN)`;
+
+      let adjustmentPrice = 100;
+      let botAddon = 500;
+      if (combinedNumbers.length > 1) adjustmentPrice = combinedNumbers[1];
+      if (combinedNumbers.length > 2) botAddon = combinedNumbers[2];
+
+      const includes = text.replace(/^(incluye:?|es|tiene)/i, '').trim() || 'Diseño responsivo de 1 sección con botón directo a WhatsApp y hosting cloud.';
+      const additionalPackages = `Ajustes por $${adjustmentPrice} MXN c/u. Bot de atención adicional por $${botAddon} MXN/mes.`;
+
+      const content = `PRODUCTO - ${title.toUpperCase()}:\n- Costo base: $${mainPrice} MXN (pago único).\n- Qué incluye: ${includes}\n- Entrega: Despliegue web inmediato llave en mano.\n- Paquetes adicionales sugeridos: ${additionalPackages}\n- Consigna Asesor: Presentar como solución accesible de entrada para iniciar a vender en internet hoy mismo.`;
+
+      const proposedBlock: BotKnowledgeBlock = {
+        id: blockId,
+        title,
+        category: 'product',
+        summary: `Producto empaquetado a $${mainPrice} MXN: ${includes.slice(0, 60)}...`,
+        content,
+        structuredData: {
+          price: mainPrice,
+          adjustmentPrice,
+          deliveryFormat: 'Despliegue web inmediato',
+          includes,
+          additionalPackages,
+          advisorInstructions: `Presentar como producto estrella accesible. Ofrecer adicionales tras confirmar el interés.`
+        },
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        authorEmail: adminEmail
+      };
+
+      return {
+        replyText: `¡Listo! He completado el perfil del **Producto** con tus especificaciones.\n\nRevisa el bloque propuesto a continuación y haz clic en **"Confirmar y Subir a Firestore"** para añadirlo a la pestaña de **Productos** y activarlo en el Bot Asesor.`,
+        proposedBlock
+      };
+    }
   }
 
-  // STEP 2: Initial instruction received (e.g. "cambia el precio a 300 pesos")
-  if (lower.includes('precio') || lower.includes('costo') || lower.includes('pesos') || lower.includes('cambia') || numbers.length > 0) {
-    const targetPrice = primaryNumber || 300;
-
-    // Build a draft proposed block in progress
-    const draftBlock: BotKnowledgeBlock = {
-      id: `draft-${Date.now().toString(36)}`,
-      title: `Propuesta de Paquete ($${targetPrice} MXN)`,
-      category: 'package',
-      summary: `Ajuste de precio base a $${targetPrice} MXN (en espera de especificación de paquete).`,
-      content: `PAQUETE EN ELABORACIÓN: Precio de $${targetPrice} MXN. En espera de confirmación de qué incluye y paquetes complementarios.`,
-      structuredData: {
-        price: targetPrice,
-        status: 'draft_in_progress'
-      },
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorEmail: adminEmail
-    };
-
-    return {
-      replyText:
-        `Entendido, quieres fijar el precio en **$${targetPrice} pesos**.\n\n` +
-        `Para completar el perfil de este cambio y que el Bot Asesor pueda cotizar y argumentar la venta adecuadamente, por favor indícame:\n\n` +
-        `1. **¿Qué incluye exactamente el paquete de $${targetPrice} pesos?** *(por ejemplo: ¿diseño de 1 sola sección, hosting, botón a WhatsApp, cotizador?)*\n` +
-        `2. **¿Este precio sustituye al paquete básico o es una promoción / paquete especial?**\n` +
-        `3. **¿El bot asesor puede ofrecer otros paquetes o adicionales?** *(por ejemplo: ajustes por $100, dominio propio, bot de WhatsApp por $500, etc.)*`,
-      proposedBlock: draftBlock
-    };
-  }
-
-  // STEP 3: Request to add a new bot or service
-  if (lower.includes('bot') || lower.includes('whatsapp') || lower.includes('servicio') || lower.includes('paquete')) {
-    const draftBlock: BotKnowledgeBlock = {
-      id: `draft-${Date.now().toString(36)}`,
-      title: `Nuevo Servicio de Bot / Asistente`,
-      category: 'package',
-      summary: 'Configuración de nuevo paquete de atención automatizada.',
-      content: 'NUEVO SERVICIO DE ATENCIÓN: Integración con IA y mensajería en la nube.',
-      structuredData: {
-        category: 'bot'
-      },
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorEmail: adminEmail
-    };
-
-    return {
-      replyText:
-        `¡Excelente! Vamos a diseñar este nuevo servicio para el Bot Asesor.\n\n` +
-        `Por favor compleméntame estos datos clave:\n\n` +
-        `1. **¿Cuál será la tarifa y modalidad?** *(¿pago único o renta mensual?)*\n` +
-        `2. **¿En qué canales operará?** *(¿WhatsApp, Telegram, Web o todos?)*\n` +
-        `3. **¿Qué cuota gratuita de mensajes incluirá y cómo debe ofrecerlo el asesor?*`,
-      proposedBlock: draftBlock
-    };
-  }
-
-  // STEP 4: Rule or communication guideline
-  if (lower.includes('regla') || lower.includes('consigna') || lower.includes('tecnicismo') || lower.includes('vender') || lower.includes('tono')) {
-    const draftBlock: BotKnowledgeBlock = {
-      id: `draft-${Date.now().toString(36)}`,
-      title: `Nueva Consigna de Comunicación`,
-      category: 'rule',
-      summary: 'Pauta de lenguaje y comportamiento para el Bot Asesor.',
-      content: `REGLA DE CONVERSACIÓN: ${text}`,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorEmail: adminEmail
-    };
-
+  // --------------------------------------------------------------------------
+  // CASE 2: New instruction - Asking tailored clarifying questions
+  // --------------------------------------------------------------------------
+  if (category === 'instruction') {
     return {
       replyText:
-        `Perfecto, configuremos una nueva directriz para el Bot Asesor.\n\n` +
-        `1. **¿Cómo debe reflejarse esto en las respuestas al cliente?** *(¿algún ejemplo de frase clave?)*\n` +
-        `2. **¿Debe aplicarse a todos los servicios o solo a cotizaciones específicas?*`,
-      proposedBlock: draftBlock
+        `Entendido, vamos a configurar una **Instrucción al Bot Asesor**.\n\n` +
+        `Para redactar la consigna con total claridad para su comportamiento en vivo, por favor indícame:\n\n` +
+        `1. **¿Cuál es la regla o consigna exacta que debe seguir el bot?** *(por ejemplo: evitar tecnicismos, recomendar una herramienta, o cierta frase al cotizar)*\n` +
+        `2. **¿Cómo debe expresarse ante el cliente?** *(¿qué palabras debe usar o qué debe evitar?)*\n` +
+        `3. **¿Aplica para todos los clientes o en una situación específica?*`
     };
   }
 
-  // STEP 5: Default assistance
+  if (category === 'service') {
+    const targetPrice = primaryNumber || 1000;
+    return {
+      replyText:
+        `Entendido, configuremos un nuevo **Servicio** para el catálogo.\n\n` +
+        `Por favor compleméntame estos detalles para estructurarlo:\n\n` +
+        `1. **¿Qué tipo de servicio es y cuál será la tarifa?** *(¿renta mensual recurrente de $${targetPrice} MXN o costo por ajuste/evento?)*\n` +
+        `2. **¿En qué canales opera y qué infraestructura/cuota incluye?** *(ej. WhatsApp, Telegram, Web, cuota de IA)*\n` +
+        `3. **¿Cómo debe ofrecerlo el Bot Asesor a los clientes interesados?*`
+    };
+  }
+
+  // Default: PRODUCT
+  const targetPrice = primaryNumber || 300;
   return {
     replyText:
-      `¡Hola! Soy tu **Bot Entrenador**. Mi consigna es ayudarte a definir y complementar cambios para el Bot Asesor.\n\n` +
-      `Puedes indicarme por ejemplo:\n` +
-      `• *"Cambia el precio a 300 pesos"*\n` +
-      `• *"Crea un paquete de Web con Bot de WhatsApp"*\n` +
-      `• *"Agrega una promoción de descuento para negocios locales"*\n\n` +
-      `Te haré unas breves preguntas para completar el perfil del cambio y generaré el bloque maestro para subirlo a Firestore.`
+      `Entendido, configuremos un **Producto** con precio de **$${targetPrice} pesos**.\n\n` +
+      `Para completar el perfil del producto y que el Bot Asesor pueda cotizarlo con exactitud, por favor indícame:\n\n` +
+      `1. **¿Qué incluye exactamente el producto de $${targetPrice} pesos?** *(por ejemplo: ¿diseño de 1 sola sección, hosting, botón a WhatsApp, catálogo?)*\n` +
+      `2. **¿Cómo se entrega o instala al cliente?** *(ej. despliegue web inmediato, instalación en 1 computadora local, etc.)*\n` +
+      `3. **¿El Bot Asesor puede ofrecer otros productos o servicios complementarios?** *(ej. ajustes por $100, bot de WhatsApp por $500, etc.)*`
   };
 }
 
 /**
- * Legacy NLP parser kept for quick slider/text backwards compatibility.
+ * Legacy NLP parser kept for backward compatibility.
  */
 export function processTrainerInstruction(
   instruction: string,

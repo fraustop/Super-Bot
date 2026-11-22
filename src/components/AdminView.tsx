@@ -11,7 +11,8 @@ import {
   Eye,
   LogOut,
   Package,
-  Boxes,
+  Wrench,
+  Brain,
   Trash2,
   ArrowRight,
   PlusCircle,
@@ -29,7 +30,10 @@ import {
   saveBotKnowledgeToFirestore,
   addOrUpdateKnowledgeBlock,
   deleteKnowledgeBlock,
-  interactWithTrainerBot
+  interactWithTrainerBot,
+  isProductBlock,
+  isServiceBlock,
+  isInstructionBlock
 } from '../services/botKnowledgeService';
 import type { AppUser } from '../firebase/config';
 
@@ -47,15 +51,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onOpenChat
 }) => {
   const [config, setConfig] = useState<BotKnowledgeConfig>(DEFAULT_BOT_KNOWLEDGE);
-  const [activeTab, setActiveTab] = useState<'trainer' | 'objects' | 'pricing' | 'raw'>('trainer');
-  const [objectCategoryFilter, setObjectCategoryFilter] = useState<'all' | 'package' | 'pricing' | 'promotion' | 'rule'>('all');
+  const [activeTab, setActiveTab] = useState<'trainer' | 'products' | 'services' | 'instructions' | 'pricing' | 'raw'>('trainer');
+  const [trainerFocus, setTrainerFocus] = useState<'product' | 'service' | 'instruction'>('product');
 
   // Interactive Trainer Chat
   const [chatMessages, setChatMessages] = useState<TrainerChatMessage[]>([
     {
       id: 'init-msg',
       sender: 'trainer',
-      text: '¡Hola! Soy tu **Bot Entrenador**. Mi consigna es ayudarte a definir y complementar cambios para el Bot Asesor mediante preguntas interactivas.\n\nPor ejemplo, si me dices: *"cambia el precio a 300 pesos"*, te preguntaré qué incluye el paquete, si puede ofrecer paquetes adicionales, etc., para armar el bloque maestro y subirlo a Firestore.',
+      text: '¡Hola! Soy tu **Bot Entrenador**.\n\nPuedo ayudarte a crear y configurar tres tipos de objetos maestros para el Bot Asesor:\n1. 📦 **Productos**: Software empaquetado y licencias de pago único.\n2. 🛠️ **Servicios**: Rentas mensuales de bots, pólizas de mantenimiento e infraestructura cloud.\n3. 🧠 **Instrucciones al Bot**: Reglas de lenguaje, consignas de venta, redirecciones y cotizaciones.\n\nElige el tipo de objeto arriba o hazme una indicación y te haré preguntas interactivas para armar el bloque maestro y sincronizarlo con Firestore.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -84,13 +88,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const adminEmail = currentUser?.email || 'admin@superbot.ai';
 
+  // Categorized blocks
+  const productBlocks = (config.knowledgeBlocks || []).filter(isProductBlock);
+  const serviceBlocks = (config.knowledgeBlocks || []).filter(isServiceBlock);
+  const instructionBlocks = (config.knowledgeBlocks || []).filter(isInstructionBlock);
+
   // Send message to Trainer Bot
-  const handleSendMessage = async (customPrompt?: string) => {
+  const handleSendMessage = async (customPrompt?: string, overrideFocus?: 'product' | 'service' | 'instruction') => {
     const textToSend = (customPrompt || userInput).trim();
     if (!textToSend || trainerLoading) return;
 
     setUserInput('');
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const effectiveFocus = overrideFocus || trainerFocus;
 
     const userMsg: TrainerChatMessage = {
       id: `usr-${Date.now()}`,
@@ -104,7 +114,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setTrainerLoading(true);
 
     try {
-      const result = await interactWithTrainerBot(textToSend, newHistory, config, adminEmail);
+      const result = await interactWithTrainerBot(textToSend, newHistory, config, adminEmail, effectiveFocus);
 
       const botMsg: TrainerChatMessage = {
         id: `bot-${Date.now()}`,
@@ -142,9 +152,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setSaving(false);
 
     if (res.success) {
+      const categoryLabel = isProductBlock(blockToUpload)
+        ? 'Productos'
+        : isServiceBlock(blockToUpload)
+          ? 'Servicios'
+          : 'Instrucciones al Bot';
+
       setSaveStatus({
         type: 'success',
-        message: `¡Bloque "${blockToUpload.title}" confirmado y subido con éxito al documento maestro de Firestore!`
+        message: `¡"${blockToUpload.title}" confirmado y sincronizado con Firestore en la pestaña de ${categoryLabel}!`
       });
 
       // Add confirmation message to chat
@@ -153,7 +169,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         {
           id: `confirmed-${Date.now()}`,
           sender: 'trainer',
-          text: `🎉 **¡Bloque confirmado y subido con éxito a Firestore!**\n\nEl objeto **"${blockToUpload.title}"** ya forma parte de los documentos maestros. El Bot Asesor comercial ya lo tiene incorporado en sus respuestas y cotizaciones en vivo.`,
+          text: `🎉 **¡Bloque confirmado y subido con éxito a Firestore!**\n\nEl objeto **"${blockToUpload.title}"** ya forma parte de los documentos maestros en la pestaña de **${categoryLabel}**. El Bot Asesor comercial ya lo tiene incorporado en sus respuestas y cotizaciones en vivo.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -170,7 +186,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Delete an existing knowledge block
   const handleDeleteBlock = async (blockId: string, blockTitle: string) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el objeto "${blockTitle}" de los documentos maestros de Firestore?`)) {
+    if (!window.confirm(`¿Estás seguro de eliminar "${blockTitle}" de los documentos maestros de Firestore?`)) {
       return;
     }
 
@@ -181,7 +197,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (res.success) {
       setSaveStatus({
         type: 'success',
-        message: `Objeto "${blockTitle}" eliminado de Firestore.`
+        message: `"${blockTitle}" eliminado de Firestore.`
       });
       setTimeout(() => setSaveStatus(null), 4000);
     } else {
@@ -193,18 +209,38 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // Load an existing block into the Trainer Chat to refine it
-  const handleRefineBlockWithTrainer = (block: BotKnowledgeBlock) => {
+  const handleRefineBlockWithTrainer = (
+    block: BotKnowledgeBlock,
+    focus: 'product' | 'service' | 'instruction'
+  ) => {
     setActiveTab('trainer');
+    setTrainerFocus(focus);
     setActiveProposedBlock(block);
-    const text = `Quiero modificar el objeto "${block.title}". Precio actual: $${block.structuredData?.price || 0} MXN. ¿Qué cambios podemos hacerle?`;
-    handleSendMessage(text);
+    let prompt = '';
+    if (focus === 'product') {
+      prompt = `Quiero modificar el producto "${block.title}". Precio actual: $${block.structuredData?.price || 0} MXN. ¿Qué cambios podemos hacerle?`;
+    } else if (focus === 'service') {
+      prompt = `Quiero actualizar el servicio "${block.title}". Tarifa actual: $${block.structuredData?.monthlyPrice || block.structuredData?.adjustmentPrice || 0} MXN. ¿Qué ajustes realizamos?`;
+    } else {
+      prompt = `Quiero refinar la instrucción al bot "${block.title}". Regla actual: ${block.structuredData?.advisorInstructions || block.summary}. ¿Cómo la ajustamos?`;
+    }
+    handleSendMessage(prompt, focus);
   };
 
-  // Filtered blocks list
-  const filteredBlocks = (config.knowledgeBlocks || []).filter(b => {
-    if (objectCategoryFilter === 'all') return true;
-    return b.category === objectCategoryFilter;
-  });
+  // Switch to Trainer Bot from any category tab
+  const handleStartTrainingCategory = (focus: 'product' | 'service' | 'instruction') => {
+    setActiveTab('trainer');
+    setTrainerFocus(focus);
+    let initialPrompt = '';
+    if (focus === 'product') {
+      initialPrompt = 'Quiero registrar un nuevo Producto en el catálogo de venta';
+    } else if (focus === 'service') {
+      initialPrompt = 'Quiero configurar un nuevo Servicio recurrente para el Bot Asesor';
+    } else {
+      initialPrompt = 'Quiero agregar una nueva regla o instrucción de comportamiento para el Bot Asesor';
+    }
+    handleSendMessage(initialPrompt, focus);
+  };
 
   return (
     <div className="admin-dashboard-container">
@@ -220,7 +256,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <span className="admin-role-pill">Administrador</span>
             </div>
             <p className="admin-subtitle">
-              Entrenamiento interactivo con preguntas, objetos maestros y sincronización en vivo con Firestore
+              Configura Productos, Servicios e Instrucciones al Bot con entrenamiento interactivo y sincronización en Firestore
             </p>
           </div>
         </div>
@@ -263,30 +299,59 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="admin-nav-card">
             <h4 className="admin-nav-heading">Módulos del Sistema</h4>
             <div className="admin-nav-tabs">
+              {/* Tab 1: Bot Entrenador */}
               <button
                 type="button"
                 className={`admin-nav-tab-btn ${activeTab === 'trainer' ? 'active' : ''}`}
                 onClick={() => setActiveTab('trainer')}
               >
-                <Sparkles size={17} />
+                <Sparkles size={17} className="text-amber-400" />
                 <div className="nav-tab-label-group">
                   <span>Bot Entrenador</span>
                   <span className="nav-tab-badge-sub">Preguntas & Bloques</span>
                 </div>
               </button>
 
+              {/* Tab 2: Productos */}
               <button
                 type="button"
-                className={`admin-nav-tab-btn ${activeTab === 'objects' ? 'active' : ''}`}
-                onClick={() => setActiveTab('objects')}
+                className={`admin-nav-tab-btn ${activeTab === 'products' ? 'active product-active' : ''}`}
+                onClick={() => setActiveTab('products')}
               >
-                <Boxes size={17} />
+                <Package size={17} className="text-emerald-400" />
                 <div className="nav-tab-label-group">
-                  <span>Objetos Creados</span>
-                  <span className="nav-tab-badge-count">{config.knowledgeBlocks?.length || 0}</span>
+                  <span>Productos</span>
+                  <span className="nav-tab-badge-count green">{productBlocks.length}</span>
                 </div>
               </button>
 
+              {/* Tab 3: Servicios */}
+              <button
+                type="button"
+                className={`admin-nav-tab-btn ${activeTab === 'services' ? 'active service-active' : ''}`}
+                onClick={() => setActiveTab('services')}
+              >
+                <Wrench size={17} className="text-cyan-400" />
+                <div className="nav-tab-label-group">
+                  <span>Servicios</span>
+                  <span className="nav-tab-badge-count cyan">{serviceBlocks.length}</span>
+                </div>
+              </button>
+
+              {/* Tab 4: Instrucciones al Bot */}
+              <button
+                type="button"
+                className={`admin-nav-tab-btn ${activeTab === 'instructions' ? 'active instruction-active' : ''}`}
+                onClick={() => setActiveTab('instructions')}
+              >
+                <Brain size={17} className="text-purple-400" />
+                <div className="nav-tab-label-group">
+                  <span>Instrucciones al Bot</span>
+                  <span className="nav-tab-badge-count purple">{instructionBlocks.length}</span>
+                </div>
+              </button>
+
+              {/* Tab 5: Tarifas y Cuotas */}
               <button
                 type="button"
                 className={`admin-nav-tab-btn ${activeTab === 'pricing' ? 'active' : ''}`}
@@ -299,6 +364,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </button>
 
+              {/* Tab 6: Documento Maestro */}
               <button
                 type="button"
                 className={`admin-nav-tab-btn ${activeTab === 'raw' ? 'active' : ''}`}
@@ -313,21 +379,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           </div>
 
+          {/* Firestore Connection Badge */}
           <div className="admin-firestore-status-card">
             <div className="firestore-status-header">
               <span className="status-dot-live"></span>
               <span className="status-label">Firestore: <code>bot_knowledge</code></span>
             </div>
+            <div className="firestore-summary-metrics">
+              <div className="metric-row">
+                <span className="metric-name">📦 Productos:</span>
+                <span className="text-emerald-400 font-bold">{productBlocks.length}</span>
+              </div>
+              <div className="metric-row">
+                <span className="metric-name">🛠️ Servicios:</span>
+                <span className="text-cyan-400 font-bold">{serviceBlocks.length}</span>
+              </div>
+              <div className="metric-row">
+                <span className="metric-name">🧠 Instrucciones:</span>
+                <span className="text-purple-400 font-bold">{instructionBlocks.length}</span>
+              </div>
+            </div>
             <p className="firestore-meta-text">
-              <strong>Objetos en Documento Maestro:</strong><br />
-              <span className="text-emerald-400 font-semibold">{config.knowledgeBlocks?.length || 0} objetos activos</span>
-            </p>
-            <p className="firestore-meta-text">
-              <strong>Última sincronización:</strong><br />
-              {config.lastUpdated ? new Date(config.lastUpdated).toLocaleString('es-MX') : 'Sesión activa'}
-            </p>
-            <p className="firestore-meta-text">
-              <strong>Precio Web actual:</strong> ${config.pricing.webBasic} MXN
+              <strong>Sincronización activa:</strong><br />
+              {config.lastUpdated ? new Date(config.lastUpdated).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'En línea'}
             </p>
           </div>
         </aside>
@@ -346,7 +420,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {/* ================================================================= */}
-          {/* TAB 1: INTERACTIVE TRAINER BOT (Questions, Interview & Blocks)     */}
+          {/* TAB 1: INTERACTIVE TRAINER BOT (Categorized Coaching & Blocks)    */}
           {/* ================================================================= */}
           {activeTab === 'trainer' && (
             <div className="admin-trainer-layout">
@@ -356,38 +430,128 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <div className="trainer-avatar-box">
                     <Sparkles size={20} className="text-amber-400" />
                   </div>
-                  <div>
-                    <h3 className="trainer-chat-title">Bot Entrenador Interactivo</h3>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="trainer-chat-title">Bot Entrenador Interactivo</h3>
+                      <span className="text-xs text-muted">Firestore en tiempo real</span>
+                    </div>
                     <p className="trainer-chat-desc">
-                      Hazle una petición y te formulará preguntas para complementar el perfil del cambio antes de agregarlo a Firestore.
+                      Hazle una indicación y te formulará preguntas para estructurar el perfil del cambio antes de agregarlo a Firestore.
                     </p>
                   </div>
                 </div>
 
-                {/* Quick Prompts */}
+                {/* Training Focus Switcher */}
+                <div className="trainer-focus-bar">
+                  <span className="focus-bar-label">¿Qué deseas entrenar hoy?</span>
+                  <div className="focus-buttons-group">
+                    <button
+                      type="button"
+                      className={`focus-pill-btn product ${trainerFocus === 'product' ? 'active' : ''}`}
+                      onClick={() => setTrainerFocus('product')}
+                    >
+                      <Package size={14} />
+                      <span>📦 Producto</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`focus-pill-btn service ${trainerFocus === 'service' ? 'active' : ''}`}
+                      onClick={() => setTrainerFocus('service')}
+                    >
+                      <Wrench size={14} />
+                      <span>🛠️ Servicio</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`focus-pill-btn instruction ${trainerFocus === 'instruction' ? 'active' : ''}`}
+                      onClick={() => setTrainerFocus('instruction')}
+                    >
+                      <Brain size={14} />
+                      <span>🧠 Instrucción al Bot</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Prompts Contextual to Active Focus */}
                 <div className="trainer-quick-chips">
                   <span className="quick-chips-label">Prueba con:</span>
-                  <button
-                    type="button"
-                    className="quick-chip-btn"
-                    onClick={() => handleSendMessage('cambia el precio a 300 pesos')}
-                  >
-                    "Cambia el precio a 300 pesos"
-                  </button>
-                  <button
-                    type="button"
-                    className="quick-chip-btn"
-                    onClick={() => handleSendMessage('crea un paquete de pagina web con bot de whatsapp')}
-                  >
-                    "Crear paquete Web + Bot"
-                  </button>
-                  <button
-                    type="button"
-                    className="quick-chip-btn"
-                    onClick={() => handleSendMessage('agrega una promocion de 20% en aplicaciones')}
-                  >
-                    "Promoción en Apps"
-                  </button>
+                  {trainerFocus === 'product' && (
+                    <>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('cambia el precio a 300 pesos')}
+                      >
+                        "Cambia el precio a 300 pesos"
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('crea un producto de tienda web express de $400 pesos')}
+                      >
+                        "Tienda Web Express ($400)"
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('agrega un producto de app POS mostrador con cobro ágil')}
+                      >
+                        "App POS mostrador local"
+                      </button>
+                    </>
+                  )}
+
+                  {trainerFocus === 'service' && (
+                    <>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('crea una renta de bot de whatsapp por 1000 pesos mensuales')}
+                      >
+                        "Renta Bot WhatsApp ($1,000/mes)"
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('agrega poliza de mantenimiento web por 100 pesos por cambio')}
+                      >
+                        "Póliza de Ajustes ($100/ajuste)"
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('servicio de sincronizacion cloud y respaldo de datos por 300 pesos al mes')}
+                      >
+                        "Sincronización Cloud ($300/mes)"
+                      </button>
+                    </>
+                  )}
+
+                  {trainerFocus === 'instruction' && (
+                    <>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('regla: prohibido usar tecnicismos complejos con clientes')}
+                      >
+                        "Regla: Cero Tecnicismos"
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('consigna: si el cliente pregunta si puede hacer la pagina el mismo redirigir a google gemini')}
+                      >
+                        "Redirección a Google Gemini"
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip-btn"
+                        onClick={() => handleSendMessage('consigna: siempre actuar con actitud de vendedor y cerrar con llamada a la accion comercial')}
+                      >
+                        "Actitud de Venta con CTA"
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Messages Container */}
@@ -422,7 +586,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             <div className="inline-block-header">
                               <Tag size={14} className="text-cyan-400" />
                               <span className="font-semibold">{msg.proposedBlock.title}</span>
-                              <span className="inline-block-cat-badge">{msg.proposedBlock.category}</span>
+                              <span className={`inline-block-cat-badge ${msg.proposedBlock.category}`}>
+                                {msg.proposedBlock.category}
+                              </span>
                             </div>
                             <p className="inline-block-summary">{msg.proposedBlock.summary}</p>
                             <button
@@ -445,7 +611,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         <Bot size={16} className="text-amber-400 animate-spin" />
                       </div>
                       <div className="bubble-content-box">
-                        <span className="text-xs text-muted">El Bot Entrenador está analizando tu respuesta...</span>
+                        <span className="text-xs text-muted">El Bot Entrenador está analizando tu indicación...</span>
                       </div>
                     </div>
                   )}
@@ -462,7 +628,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 >
                   <input
                     type="text"
-                    placeholder="Escribe tu instrucción o responde las preguntas del entrenador..."
+                    placeholder={`Escribe tu indicación o responde las preguntas para configurar este ${trainerFocus === 'product' ? 'Producto' : trainerFocus === 'service' ? 'Servicio' : 'Instrucción'}...`}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     disabled={trainerLoading}
@@ -484,7 +650,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="proposed-block-panel">
                   <div className="proposed-panel-header">
                     <div className="flex items-center gap-2">
-                      <Package size={18} className="text-cyan-400" />
+                      <Tag size={18} className="text-cyan-400" />
                       <h4 className="proposed-panel-title">Bloque Propuesto para Firestore</h4>
                     </div>
                     {activeProposedBlock && (
@@ -496,42 +662,81 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <div className="proposed-block-card">
                       <div className="proposed-card-top">
                         <h4 className="proposed-block-title">{activeProposedBlock.title}</h4>
-                        <span className="proposed-category-badge">{activeProposedBlock.category}</span>
+                        <span className={`proposed-category-badge ${activeProposedBlock.category}`}>
+                          {activeProposedBlock.category.toUpperCase()}
+                        </span>
                       </div>
 
                       <div className="proposed-details-grid">
+                        {/* Price details */}
                         {activeProposedBlock.structuredData?.price !== undefined && (
                           <div className="proposed-detail-item">
-                            <span className="detail-label">Precio Base:</span>
+                            <span className="detail-label">Precio Único Base:</span>
                             <span className="detail-value text-emerald-400 font-bold">
                               ${activeProposedBlock.structuredData.price} MXN
+                            </span>
+                          </div>
+                        )}
+                        {activeProposedBlock.structuredData?.monthlyPrice !== undefined && (
+                          <div className="proposed-detail-item">
+                            <span className="detail-label">Renta Mensual:</span>
+                            <span className="detail-value text-cyan-400 font-bold">
+                              ${activeProposedBlock.structuredData.monthlyPrice} MXN/mes
                             </span>
                           </div>
                         )}
                         {activeProposedBlock.structuredData?.adjustmentPrice !== undefined && (
                           <div className="proposed-detail-item">
                             <span className="detail-label">Costo por Ajuste:</span>
-                            <span className="detail-value">
+                            <span className="detail-value text-amber-400 font-bold">
                               ${activeProposedBlock.structuredData.adjustmentPrice} MXN
                             </span>
                           </div>
                         )}
+
+                        {/* Format / Frequency / Channels */}
+                        {activeProposedBlock.structuredData?.deliveryFormat && (
+                          <div className="proposed-detail-item">
+                            <span className="detail-label">Formato de Entrega:</span>
+                            <span className="detail-value">{activeProposedBlock.structuredData.deliveryFormat}</span>
+                          </div>
+                        )}
+                        {activeProposedBlock.structuredData?.frequency && (
+                          <div className="proposed-detail-item">
+                            <span className="detail-label">Frecuencia:</span>
+                            <span className="detail-value">{activeProposedBlock.structuredData.frequency}</span>
+                          </div>
+                        )}
+                        {activeProposedBlock.structuredData?.channels && (
+                          <div className="proposed-detail-item">
+                            <span className="detail-label">Canales de Operación:</span>
+                            <span className="detail-value">{activeProposedBlock.structuredData.channels}</span>
+                          </div>
+                        )}
+                        {activeProposedBlock.structuredData?.ruleType && (
+                          <div className="proposed-detail-item">
+                            <span className="detail-label">Tipo de Directriz:</span>
+                            <span className="detail-value text-purple-300 font-semibold">{activeProposedBlock.structuredData.ruleType}</span>
+                          </div>
+                        )}
+
+                        {/* Includes & Addons */}
                         {activeProposedBlock.structuredData?.includes && (
                           <div className="proposed-detail-item full">
-                            <span className="detail-label">Qué Incluye el Paquete:</span>
+                            <span className="detail-label">Qué Incluye / Cobertura:</span>
                             <span className="detail-value">{activeProposedBlock.structuredData.includes}</span>
                           </div>
                         )}
                         {activeProposedBlock.structuredData?.additionalPackages && (
                           <div className="proposed-detail-item full">
-                            <span className="detail-label">Paquetes Complementarios / Adicionales:</span>
+                            <span className="detail-label">Adicionales / Complementarios:</span>
                             <span className="detail-value">{activeProposedBlock.structuredData.additionalPackages}</span>
                           </div>
                         )}
                         {activeProposedBlock.structuredData?.advisorInstructions && (
                           <div className="proposed-detail-item full">
-                            <span className="detail-label">Instrucción de Venta para el Asesor:</span>
-                            <span className="detail-value text-amber-300">
+                            <span className="detail-label">Instrucción para el Bot Asesor:</span>
+                            <span className="detail-value text-amber-300 font-medium">
                               {activeProposedBlock.structuredData.advisorInstructions}
                             </span>
                           </div>
@@ -573,8 +778,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </div>
                       <h5>No hay ningún bloque propuesto aún</h5>
                       <p>
-                        Escribe en el chat del Bot Entrenador (por ejemplo: <em>"cambia el precio a 300 pesos"</em>).
-                        El bot te hará preguntas para armar el perfil de cambios y te mostrará el bloque aquí para que lo confirmes antes de subirlo a Firestore.
+                        Selecciona arriba si quieres configurar un <strong>Producto</strong>, <strong>Servicio</strong> o <strong>Instrucción</strong>.
+                        Escribe en el chat y el entrenador formulará preguntas para armar el bloque y mostrártelo aquí antes de subirlo a Firestore.
                       </p>
                     </div>
                   )}
@@ -584,122 +789,349 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {/* ================================================================= */}
-          {/* TAB 2: OBJETOS CREADOS EN FIRESTORE                                */}
+          {/* TAB 2: PRODUCTOS (Catálogo empaquetado de software/web)           */}
           {/* ================================================================= */}
-          {activeTab === 'objects' && (
-            <div className="admin-objects-section">
-              <div className="objects-header-bar">
+          {activeTab === 'products' && (
+            <div className="admin-category-section">
+              <div className="category-section-header">
                 <div>
-                  <h3 className="section-title">Objetos Creados en Documentos Maestros</h3>
-                  <p className="section-desc">
-                    Colección de paquetes, reglas y promociones activas que el Bot Asesor consulta en Firestore en tiempo real.
+                  <div className="flex items-center gap-2">
+                    <Package size={22} className="text-emerald-400" />
+                    <h3 className="category-section-title">Catálogo de Productos</h3>
+                    <span className="category-count-badge green">{productBlocks.length} activos</span>
+                  </div>
+                  <p className="category-section-desc">
+                    Productos de software empaquetado y licencias de pago único (páginas web, apps para 1 PC de mostrador y formularios inteligentes).
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="btn-create-new-object"
-                  onClick={() => {
-                    setActiveTab('trainer');
-                    setUserInput('Quiero crear un nuevo paquete para el Bot Asesor');
-                  }}
+                  className="btn-category-create green"
+                  onClick={() => handleStartTrainingCategory('product')}
                 >
                   <PlusCircle size={16} />
-                  <span>Crear Nuevo Objeto con el Bot</span>
+                  <span>Crear Producto con el Bot Entrenador</span>
                 </button>
               </div>
 
-              {/* Filter Pills */}
-              <div className="objects-filter-pills">
-                <button
-                  type="button"
-                  className={`filter-pill ${objectCategoryFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setObjectCategoryFilter('all')}
-                >
-                  Todos ({config.knowledgeBlocks?.length || 0})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${objectCategoryFilter === 'package' ? 'active' : ''}`}
-                  onClick={() => setObjectCategoryFilter('package')}
-                >
-                  Paquetes ({config.knowledgeBlocks?.filter(b => b.category === 'package').length || 0})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${objectCategoryFilter === 'rule' ? 'active' : ''}`}
-                  onClick={() => setObjectCategoryFilter('rule')}
-                >
-                  Reglas de Asesor ({config.knowledgeBlocks?.filter(b => b.category === 'rule').length || 0})
-                </button>
-              </div>
+              {productBlocks.length > 0 ? (
+                <div className="category-cards-grid">
+                  {productBlocks.map((block) => (
+                    <div key={block.id} className="category-card product-card">
+                      <div className="category-card-header">
+                        <div className="category-title-group">
+                          <h4 className="category-card-title">{block.title}</h4>
+                          <span className="category-tag-pill green">PRODUCTO</span>
+                        </div>
+                        {block.structuredData?.price !== undefined && (
+                          <div className="category-price-tag green">
+                            <DollarSign size={14} />
+                            <span>${block.structuredData.price} MXN</span>
+                          </div>
+                        )}
+                      </div>
 
-              {/* Grid of Objects */}
-              <div className="objects-cards-grid">
-                {filteredBlocks.map((block) => (
-                  <div key={block.id} className="object-card">
-                    <div className="object-card-header">
-                      <div className="object-title-group">
-                        <h4 className="object-title">{block.title}</h4>
-                        <span className={`object-category-pill ${block.category}`}>
-                          {block.category}
+                      {block.structuredData?.deliveryFormat && (
+                        <div className="category-format-badge">
+                          <span>🚚 Entrega: {block.structuredData.deliveryFormat}</span>
+                        </div>
+                      )}
+
+                      <p className="category-card-summary">{block.summary}</p>
+
+                      <div className="category-details-box">
+                        {block.structuredData?.includes && (
+                          <div className="detail-entry">
+                            <strong>Qué incluye:</strong> {block.structuredData.includes}
+                          </div>
+                        )}
+                        {block.structuredData?.additionalPackages && (
+                          <div className="detail-entry">
+                            <strong>Adicionales:</strong> {block.structuredData.additionalPackages}
+                          </div>
+                        )}
+                        {block.structuredData?.advisorInstructions && (
+                          <div className="detail-entry highlight-instruction">
+                            <strong>Instrucción Asesor:</strong> {block.structuredData.advisorInstructions}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="category-card-footer">
+                        <span className="card-timestamp">
+                          Actualizado: {new Date(block.updatedAt).toLocaleDateString('es-MX')}
                         </span>
-                      </div>
-                      {block.structuredData?.price !== undefined && (
-                        <div className="object-price-tag">
-                          <DollarSign size={14} />
-                          <span>${block.structuredData.price} MXN</span>
+                        <div className="card-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-card-action edit"
+                            onClick={() => handleRefineBlockWithTrainer(block, 'product')}
+                            title="Refinar este producto con el Bot Entrenador"
+                          >
+                            <Sparkles size={14} />
+                            <span>Refinar con Bot</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-card-action delete"
+                            onClick={() => handleDeleteBlock(block.id, block.title)}
+                            title="Eliminar de Firestore"
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar</span>
+                          </button>
                         </div>
-                      )}
-                    </div>
-
-                    <p className="object-summary">{block.summary}</p>
-
-                    <div className="object-details-box">
-                      {block.structuredData?.includes && (
-                        <div className="object-detail-row">
-                          <strong>Incluye:</strong> {block.structuredData.includes}
-                        </div>
-                      )}
-                      {block.structuredData?.additionalPackages && (
-                        <div className="object-detail-row">
-                          <strong>Adicionales:</strong> {block.structuredData.additionalPackages}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="object-meta-footer">
-                      <span className="object-date">
-                        Actualizado: {new Date(block.updatedAt).toLocaleDateString('es-MX')}
-                      </span>
-                      <div className="object-card-actions">
-                        <button
-                          type="button"
-                          className="btn-card-action edit"
-                          onClick={() => handleRefineBlockWithTrainer(block)}
-                          title="Refinar con el Bot Entrenador"
-                        >
-                          <Sparkles size={14} />
-                          <span>Refinar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-card-action delete"
-                          onClick={() => handleDeleteBlock(block.id, block.title)}
-                          title="Eliminar de Firestore"
-                        >
-                          <Trash2 size={14} />
-                          <span>Eliminar</span>
-                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="category-empty-state">
+                  <Package size={48} className="text-emerald-400 opacity-60" />
+                  <h4>No hay productos registrados</h4>
+                  <p>Crea tu primer producto empaquetado interactuando con el Bot Entrenador.</p>
+                  <button
+                    type="button"
+                    className="btn-category-create green"
+                    onClick={() => handleStartTrainingCategory('product')}
+                  >
+                    <PlusCircle size={16} />
+                    <span>Crear Producto con el Bot Entrenador</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* ================================================================= */}
-          {/* TAB 3: BASE PRICING & QUOTAS CONTROLS                             */}
+          {/* TAB 3: SERVICIOS (Rentas, mantenimiento e infra cloud recurrente)  */}
+          {/* ================================================================= */}
+          {activeTab === 'services' && (
+            <div className="admin-category-section">
+              <div className="category-section-header">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Wrench size={22} className="text-cyan-400" />
+                    <h3 className="category-section-title">Servicios y Modalidades Recurrentes</h3>
+                    <span className="category-count-badge cyan">{serviceBlocks.length} activos</span>
+                  </div>
+                  <p className="category-section-desc">
+                    Servicios de valor continuo: rentas mensuales de bots de WhatsApp, pólizas de mantenimiento web e infraestructura de sincronización cloud.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-category-create cyan"
+                  onClick={() => handleStartTrainingCategory('service')}
+                >
+                  <PlusCircle size={16} />
+                  <span>Crear Servicio con el Bot Entrenador</span>
+                </button>
+              </div>
+
+              {serviceBlocks.length > 0 ? (
+                <div className="category-cards-grid">
+                  {serviceBlocks.map((block) => (
+                    <div key={block.id} className="category-card service-card">
+                      <div className="category-card-header">
+                        <div className="category-title-group">
+                          <h4 className="category-card-title">{block.title}</h4>
+                          <span className="category-tag-pill cyan">SERVICIO</span>
+                        </div>
+                        {block.structuredData?.monthlyPrice !== undefined && (
+                          <div className="category-price-tag cyan">
+                            <DollarSign size={14} />
+                            <span>${block.structuredData.monthlyPrice} MXN/mes</span>
+                          </div>
+                        )}
+                        {block.structuredData?.adjustmentPrice !== undefined && (
+                          <div className="category-price-tag amber">
+                            <DollarSign size={14} />
+                            <span>${block.structuredData.adjustmentPrice} MXN/ajuste</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {block.structuredData?.frequency && (
+                          <div className="category-format-badge">
+                            <span>🔄 {block.structuredData.frequency}</span>
+                          </div>
+                        )}
+                        {block.structuredData?.channels && (
+                          <div className="category-format-badge">
+                            <span>💬 Canales: {block.structuredData.channels}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="category-card-summary">{block.summary}</p>
+
+                      <div className="category-details-box">
+                        {block.structuredData?.includes && (
+                          <div className="detail-entry">
+                            <strong>Alcance / Qué incluye:</strong> {block.structuredData.includes}
+                          </div>
+                        )}
+                        {block.structuredData?.advisorInstructions && (
+                          <div className="detail-entry highlight-instruction">
+                            <strong>Consigna Asesor:</strong> {block.structuredData.advisorInstructions}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="category-card-footer">
+                        <span className="card-timestamp">
+                          Actualizado: {new Date(block.updatedAt).toLocaleDateString('es-MX')}
+                        </span>
+                        <div className="card-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-card-action edit"
+                            onClick={() => handleRefineBlockWithTrainer(block, 'service')}
+                            title="Refinar este servicio con el Bot Entrenador"
+                          >
+                            <Sparkles size={14} />
+                            <span>Refinar con Bot</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-card-action delete"
+                            onClick={() => handleDeleteBlock(block.id, block.title)}
+                            title="Eliminar de Firestore"
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="category-empty-state">
+                  <Wrench size={48} className="text-cyan-400 opacity-60" />
+                  <h4>No hay servicios registrados</h4>
+                  <p>Configura rentas mensuales o pólizas de mantenimiento con el Bot Entrenador.</p>
+                  <button
+                    type="button"
+                    className="btn-category-create cyan"
+                    onClick={() => handleStartTrainingCategory('service')}
+                  >
+                    <PlusCircle size={16} />
+                    <span>Crear Servicio con el Bot Entrenador</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB 4: INSTRUCCIONES AL BOT (Reglas, tono, redirección y cotizar)  */}
+          {/* ================================================================= */}
+          {activeTab === 'instructions' && (
+            <div className="admin-category-section">
+              <div className="category-section-header">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Brain size={22} className="text-purple-400" />
+                    <h3 className="category-section-title">Instrucciones al Bot Asesor</h3>
+                    <span className="category-count-badge purple">{instructionBlocks.length} directrices activas</span>
+                  </div>
+                  <p className="category-section-desc">
+                    Reglas de comportamiento y consignas obligatorias: cero tecnicismos, tono de vendedor empático, redirección a Gemini y cotizaciones autónomas.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-category-create purple"
+                  onClick={() => handleStartTrainingCategory('instruction')}
+                >
+                  <PlusCircle size={16} />
+                  <span>Crear Instrucción con el Bot Entrenador</span>
+                </button>
+              </div>
+
+              {instructionBlocks.length > 0 ? (
+                <div className="category-cards-grid">
+                  {instructionBlocks.map((block) => (
+                    <div key={block.id} className="category-card instruction-card">
+                      <div className="category-card-header">
+                        <div className="category-title-group">
+                          <h4 className="category-card-title">{block.title}</h4>
+                          <span className="category-tag-pill purple">INSTRUCCIÓN OBLIGATORIA</span>
+                        </div>
+                        {block.structuredData?.ruleType && (
+                          <div className="category-rule-badge">
+                            <span>🎯 {block.structuredData.ruleType}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="category-card-summary">{block.summary}</p>
+
+                      <div className="category-details-box instruction-box">
+                        <div className="detail-entry">
+                          <strong>Directriz oficial inyectada en el prompt maestro:</strong>
+                          <pre className="instruction-pre-code">
+                            <code>{block.content}</code>
+                          </pre>
+                        </div>
+                        {block.structuredData?.advisorInstructions && (
+                          <div className="detail-entry highlight-instruction">
+                            <strong>Objetivo en ventas:</strong> {block.structuredData.advisorInstructions}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="category-card-footer">
+                        <span className="card-timestamp">
+                          Actualizado: {new Date(block.updatedAt).toLocaleDateString('es-MX')}
+                        </span>
+                        <div className="card-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-card-action edit"
+                            onClick={() => handleRefineBlockWithTrainer(block, 'instruction')}
+                            title="Refinar esta instrucción con el Bot Entrenador"
+                          >
+                            <Sparkles size={14} />
+                            <span>Refinar con Bot</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-card-action delete"
+                            onClick={() => handleDeleteBlock(block.id, block.title)}
+                            title="Eliminar de Firestore"
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="category-empty-state">
+                  <Brain size={48} className="text-purple-400 opacity-60" />
+                  <h4>No hay instrucciones registradas</h4>
+                  <p>Agrega reglas de tono o comportamiento con el Bot Entrenador.</p>
+                  <button
+                    type="button"
+                    className="btn-category-create purple"
+                    onClick={() => handleStartTrainingCategory('instruction')}
+                  >
+                    <PlusCircle size={16} />
+                    <span>Crear Instrucción con el Bot Entrenador</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB 5: BASE PRICING & QUOTAS CONTROLS                             */}
           {/* ================================================================= */}
           {activeTab === 'pricing' && (
             <div className="admin-pricing-section">
@@ -810,7 +1242,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {/* ================================================================= */}
-          {/* TAB 4: RAW MASTER FIRESTORE DOCUMENT                               */}
+          {/* TAB 6: RAW MASTER FIRESTORE DOCUMENT                               */}
           {/* ================================================================= */}
           {activeTab === 'raw' && (
             <div className="admin-raw-section">

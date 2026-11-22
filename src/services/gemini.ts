@@ -1,4 +1,9 @@
-import { getActiveBotKnowledge } from './botKnowledgeService';
+import {
+  getActiveBotKnowledge,
+  isProductBlock,
+  isServiceBlock,
+  isInstructionBlock
+} from './botKnowledgeService';
 
 export interface ChatMessage {
   id: string;
@@ -79,14 +84,34 @@ ESQUEMA OFICIAL DE COSTOS Y RANGOS EN VIVO:
    - Pueden tener costos adicionales variables según volumen de almacenamiento o infraestructura requerida.
 
 ${kb.customNotes ? `\nNOTAS Y PROMOCIONES ACTIVAS DEL ADMINISTRADOR:\n${kb.customNotes}\n` : ''}
-${
-  kb.knowledgeBlocks && kb.knowledgeBlocks.length > 0
-    ? `\nOBJETOS Y PAQUETES MAESTROS CONFIGURADOS POR EL ENTRENADOR (FIRESTORE):\n${kb.knowledgeBlocks
-        .filter((b) => b.status === 'active')
-        .map((b, i) => `${i + 1}. [${b.category.toUpperCase()}] ${b.title}:\n   ${b.content}`)
-        .join('\n\n')}\n`
-    : ''
-}
+${(() => {
+  const activeBlocks = (kb.knowledgeBlocks || []).filter((b) => b.status === 'active');
+  if (activeBlocks.length === 0) return '';
+  const products = activeBlocks.filter(isProductBlock);
+  const services = activeBlocks.filter(isServiceBlock);
+  const instructions = activeBlocks.filter(isInstructionBlock);
+
+  let output = '\n=======================================================\n' +
+    'BASE DE CONOCIMIENTOS MAESTRA DINÁMICA (CONFIGURADA POR EL ENTRENADOR EN FIRESTORE):\n' +
+    '=======================================================\n';
+
+  if (products.length > 0) {
+    output += '\n--- SECCIÓN 1: PRODUCTOS DISPONIBLES EN EL CATÁLOGO (ENTREGA Y PAGO ÚNICO) ---\n' +
+      products.map((p, i) => `${i + 1}. [PRODUCTO] ${p.title}:\n   ${p.content}`).join('\n\n') + '\n';
+  }
+
+  if (services.length > 0) {
+    output += '\n--- SECCIÓN 2: SERVICIOS Y MODALIDADES RECURRENTES (RENTAS Y MANTENIMIENTO) ---\n' +
+      services.map((s, i) => `${i + 1}. [SERVICIO] ${s.title}:\n   ${s.content}`).join('\n\n') + '\n';
+  }
+
+  if (instructions.length > 0) {
+    output += '\n--- SECCIÓN 3: DIRECTRICES E INSTRUCCIONES ESPECÍFICAS AL ASESOR (TONO Y REGLAS) ---\n' +
+      instructions.map((ins, i) => `${i + 1}. [INSTRUCCIÓN OBLIGATORIA] ${ins.title}:\n   ${ins.content}`).join('\n\n') + '\n';
+  }
+
+  return output;
+})()}
 
 INFORMACIÓN DETALLADA DE CUOTAS DE IA, SERVIDORES Y PROVEEDORES EN LA NUBE:
 * Inteligencia Artificial (Google Gemini 1.5 Flash):
