@@ -7,12 +7,16 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
   type User,
   type Auth
 } from 'firebase/auth';
 import {
   getFirestore,
   collection,
+  doc,
+  getDoc,
+  setDoc,
   addDoc,
   serverTimestamp,
   type Firestore
@@ -95,13 +99,26 @@ export async function saveAdvisorRequest(
 }
 
 // ============================================================================
-// Authentication Helpers & Local Session Fallback
+// User Profiles & Authentication Helpers
 // ============================================================================
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone: string;
+  role: 'admin' | 'client';
+  photoURL?: string | null;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export interface AppUser {
   displayName: string | null;
   email: string | null;
+  phone?: string | null;
   photoURL?: string | null;
   uid?: string;
+  role?: 'admin' | 'client';
 }
 
 const SESSION_USER_KEY = 'superbot_active_user_session';
@@ -132,7 +149,96 @@ export function clearLocalSessionUser(): void {
   }
 }
 
-export async function loginWithGoogle(): Promise<{ user?: User; error?: string; isConfigMissing?: boolean }> {
+/**
+ * Retrieves the full user profile from Firestore collection `users`.
+ */
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  if (!db || !uid) return null;
+  try {
+    const userDocRef = doc(db, 'users', uid);
+    const snap = await getDoc(userDocRef);
+    if (snap.exists()) {
+      return snap.data() as UserProfile;
+    }
+  } catch (err) {
+    console.warn('Error fetching user profile from Firestore:', err);
+  }
+  return null;
+}
+
+/**
+ * Saves or updates a user profile document in Firestore collection `users/{uid}`.
+ */
+export async function saveUserProfile(profileData: {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone: string;
+  photoURL?: string | null;
+}): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+  const cleanEmail = profileData.email.trim().toLowerCase();
+  const isAdmin = cleanEmail === 'gffraustop@gmail.com';
+  const role: 'admin' | 'client' = isAdmin ? 'admin' : 'client';
+
+  const userProfile: UserProfile = {
+    uid: profileData.uid,
+    email: cleanEmail,
+    displayName: profileData.displayName.trim(),
+    phone: profileData.phone.trim(),
+    role,
+    photoURL: profileData.photoURL || null,
+    updatedAt: serverTimestamp()
+  };
+
+  // Update session
+  saveLocalSessionUser({
+    uid: profileData.uid,
+    email: cleanEmail,
+    displayName: userProfile.displayName,
+    phone: userProfile.phone,
+    photoURL: userProfile.photoURL,
+    role
+  });
+
+  if (auth?.currentUser && auth.currentUser.uid === profileData.uid) {
+    try {
+      await updateProfile(auth.currentUser, {
+        displayName: userProfile.displayName
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  if (db) {
+    try {
+      const userDocRef = doc(db, 'users', profileData.uid);
+      const snap = await getDoc(userDocRef);
+      if (!snap.exists()) {
+        userProfile.createdAt = serverTimestamp();
+      }
+      await setDoc(userDocRef, userProfile, { merge: true });
+      return { success: true, profile: userProfile };
+    } catch (err: any) {
+      console.error('Error writing user profile to Firestore:', err);
+      return { success: false, error: err.message || 'Error al guardar perfil en Firestore' };
+    }
+  }
+
+  return { success: true, profile: userProfile };
+}
+
+/**
+ * Sign in or sign up with Google via Firebase Auth.
+ * Automatically inspects Firestore to see if name or phone are missing.
+ */
+export async function loginWithGoogle(): Promise<{
+  user?: User;
+  profile?: UserProfile | null;
+  needsProfileCompletion?: boolean;
+  error?: string;
+  isConfigMissing?: boolean;
+}> {
   if (!isFirebaseConfigured || !auth || !googleProvider) {
     return {
       error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
@@ -141,18 +247,38 @@ export async function loginWithGoogle(): Promise<{ user?: User; error?: string; 
 
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    const profile = await getUserProfile(result.user.uid);
+
+    const hasPhone = Boolean(profile?.phone && profile.phone.trim().length > 0);
+    const hasName = Boolean(
+      (profile?.displayName && profile.displayName.trim().length > 0) ||
+      (result.user.displayName && result.user.displayName.trim().length > 0)
+    );
+
+    const needsProfileCompletion = !hasPhone || !hasName;
+
+    const cleanEmail = (result.user.email || '').toLowerCase();
+    const role = cleanEmail === 'gffraustop@gmail.com' ? 'admin' : 'client';
+
     saveLocalSessionUser({
-      displayName: result.user.displayName,
+      displayName: profile?.displayName || result.user.displayName,
       email: result.user.email,
+      phone: profile?.phone || null,
       photoURL: result.user.photoURL,
-      uid: result.user.uid
+      uid: result.user.uid,
+      role
     });
-    return { user: result.user };
+
+    return {
+      user: result.user,
+      profile,
+      needsProfileCompletion
+    };
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);
     if (error.code === 'auth/configuration-not-found' || error.message?.includes('CONFIGURATION_NOT_FOUND')) {
       return {
-        error: 'Firebase Authentication no está habilitado en tu consola de Firebase aún.',
+        error: 'El proveedor Google no está habilitado en la consola de Firebase aún.',
         isConfigMissing: true
       };
     }
@@ -160,7 +286,20 @@ export async function loginWithGoogle(): Promise<{ user?: User; error?: string; 
   }
 }
 
-export async function loginWithEmail(email: string, password: string): Promise<{ user?: User | AppUser; error?: string; isConfigMissing?: boolean }> {
+/**
+ * Sign in with Email and Password.
+ * Inspects Firestore to check if phone is missing.
+ */
+export async function loginWithEmail(
+  email: string,
+  password: string
+): Promise<{
+  user?: User | AppUser;
+  profile?: UserProfile | null;
+  needsProfileCompletion?: boolean;
+  error?: string;
+  isConfigMissing?: boolean;
+}> {
   if (!isFirebaseConfigured || !auth) {
     return {
       error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
@@ -169,23 +308,46 @@ export async function loginWithEmail(email: string, password: string): Promise<{
 
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
+    const profile = await getUserProfile(result.user.uid);
+
+    const hasPhone = Boolean(profile?.phone && profile.phone.trim().length > 0);
+    const hasName = Boolean(
+      (profile?.displayName && profile.displayName.trim().length > 0) ||
+      (result.user.displayName && result.user.displayName.trim().length > 0)
+    );
+
+    const needsProfileCompletion = !hasPhone || !hasName;
+    const cleanEmail = (result.user.email || email).toLowerCase();
+    const role = cleanEmail === 'gffraustop@gmail.com' ? 'admin' : 'client';
+
     saveLocalSessionUser({
-      displayName: result.user.displayName || email.split('@')[0],
+      displayName: profile?.displayName || result.user.displayName || email.split('@')[0],
       email: result.user.email,
+      phone: profile?.phone || null,
       photoURL: result.user.photoURL,
-      uid: result.user.uid
+      uid: result.user.uid,
+      role
     });
-    return { user: result.user };
+
+    return {
+      user: result.user,
+      profile,
+      needsProfileCompletion
+    };
   } catch (error: any) {
     console.error('Email Sign-In Error:', error);
     if (error.code === 'auth/configuration-not-found' || error.message?.includes('CONFIGURATION_NOT_FOUND')) {
       return {
-        error: 'Firebase Authentication no está habilitado en tu consola de Firebase aún.',
+        error: 'El servicio de autenticación no está habilitado en la consola de Firebase aún.',
         isConfigMissing: true
       };
     }
     let message = 'Error al iniciar sesión';
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+    if (
+      error.code === 'auth/user-not-found' ||
+      error.code === 'auth/wrong-password' ||
+      error.code === 'auth/invalid-credential'
+    ) {
       message = 'Correo electrónico o contraseña incorrectos';
     } else if (error.code === 'auth/invalid-email') {
       message = 'El formato de correo no es válido';
@@ -194,7 +356,21 @@ export async function loginWithEmail(email: string, password: string): Promise<{
   }
 }
 
-export async function registerWithEmail(email: string, password: string): Promise<{ user?: User | AppUser; error?: string; isConfigMissing?: boolean }> {
+/**
+ * Register a new user with Email, Password, Name, and Phone.
+ * Immediately saves the user profile document in Firestore collection `users`.
+ */
+export async function registerWithEmail(
+  email: string,
+  password: string,
+  displayName: string,
+  phone: string
+): Promise<{
+  user?: User | AppUser;
+  profile?: UserProfile;
+  error?: string;
+  isConfigMissing?: boolean;
+}> {
   if (!isFirebaseConfigured || !auth) {
     return {
       error: 'Firebase aún no está configurado con las credenciales de tu proyecto.'
@@ -203,26 +379,34 @@ export async function registerWithEmail(email: string, password: string): Promis
 
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
-    saveLocalSessionUser({
-      displayName: result.user.displayName || email.split('@')[0],
-      email: result.user.email,
-      photoURL: result.user.photoURL,
-      uid: result.user.uid
+
+    const saveRes = await saveUserProfile({
+      uid: result.user.uid,
+      email: result.user.email || email,
+      displayName,
+      phone,
+      photoURL: null
     });
-    return { user: result.user };
+
+    return {
+      user: result.user,
+      profile: saveRes.profile
+    };
   } catch (error: any) {
     console.error('Email Registration Error:', error);
     if (error.code === 'auth/configuration-not-found' || error.message?.includes('CONFIGURATION_NOT_FOUND')) {
       return {
-        error: 'Firebase Authentication no está habilitado en tu consola de Firebase aún.',
+        error: 'El servicio de autenticación no está habilitado en la consola de Firebase aún.',
         isConfigMissing: true
       };
     }
     let message = 'Error al registrar usuario';
     if (error.code === 'auth/email-already-in-use') {
-      message = 'Este correo electrónico ya está registrado';
+      message = 'Este correo electrónico ya está registrado. Inicia sesión.';
     } else if (error.code === 'auth/weak-password') {
       message = 'La contraseña debe tener al menos 6 caracteres';
+    } else if (error.code === 'auth/invalid-email') {
+      message = 'El formato de correo no es válido';
     }
     return { error: message };
   }

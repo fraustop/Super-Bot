@@ -6,6 +6,7 @@ import {
   LogOut,
   Sparkles,
   User,
+  Phone,
   Clock
 } from 'lucide-react';
 import type { AppUser } from '../firebase/config';
@@ -43,6 +44,12 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
               {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Cliente'}
             </h4>
             <span className="client-email">{currentUser?.email}</span>
+            {currentUser?.phone && (
+              <span className="client-phone-info">
+                <Phone size={12} />
+                <span>{currentUser.phone}</span>
+              </span>
+            )}
             <span className="client-badge">Cuenta de Cliente</span>
           </div>
         </div>

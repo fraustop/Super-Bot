@@ -11,6 +11,7 @@ import {
   logoutUser,
   getLocalSessionUser,
   saveLocalSessionUser,
+  getUserProfile,
   type AppUser
 } from './firebase/config';
 import { subscribeToBotKnowledge } from './services/botKnowledgeService';
@@ -41,16 +42,27 @@ export const App: React.FC = () => {
 
   // Firebase auth & live Firestore bot knowledge subscriptions
   useEffect(() => {
-    const unsubscribeAuth = subscribeToAuth((firebaseUser) => {
+    const unsubscribeAuth = subscribeToAuth(async (firebaseUser) => {
       if (firebaseUser) {
+        const profile = await getUserProfile(firebaseUser.uid);
+        const cleanEmail = (firebaseUser.email || '').toLowerCase();
+        const role = profile?.role || (cleanEmail === 'gffraustop@gmail.com' ? 'admin' : 'client');
+
         const mappedUser: AppUser = {
-          displayName: firebaseUser.displayName,
+          displayName: profile?.displayName || firebaseUser.displayName,
           email: firebaseUser.email,
+          phone: profile?.phone || null,
           photoURL: firebaseUser.photoURL,
-          uid: firebaseUser.uid
+          uid: firebaseUser.uid,
+          role
         };
         setCurrentUser(mappedUser);
         saveLocalSessionUser(mappedUser);
+
+        // If phone or name are missing, prompt user to complete profile
+        if (!profile?.phone || !profile.phone.trim()) {
+          setIsAuthOpen(true);
+        }
       }
     });
 
@@ -76,14 +88,10 @@ export const App: React.FC = () => {
     setClientViewMode('portal');
   };
 
-  const handleLoginSuccess = (user: { displayName: string | null; email: string | null }) => {
-    const appUser: AppUser = {
-      displayName: user.displayName,
-      email: user.email
-    };
-    setCurrentUser(appUser);
-    saveLocalSessionUser(appUser);
-    if (appUser.email?.toLowerCase() === 'gffraustop@gmail.com') {
+  const handleLoginSuccess = (user: AppUser) => {
+    setCurrentUser(user);
+    saveLocalSessionUser(user);
+    if (user.email?.toLowerCase() === 'gffraustop@gmail.com') {
       setAdminViewMode('admin');
     } else {
       setClientViewMode('portal');
@@ -119,7 +127,7 @@ export const App: React.FC = () => {
             <div className="admin-preview-top-bar">
               <div className="preview-top-bar-content">
                 <ShieldCheck size={16} className="text-emerald-400" />
-                <span>Estás en modo vista previa pública como Administrador (gffraustop@gmail.com).</span>
+                <span>Estás en modo vista previa pública como Administrador.</span>
               </div>
               <button
                 type="button"
