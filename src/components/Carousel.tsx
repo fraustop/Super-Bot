@@ -103,9 +103,10 @@ const ROTATION_INTERVAL = 4500; // 4.5 seconds per card
 
 interface CarouselProps {
   onOpenContact?: () => void;
+  isChatOpen?: boolean;
 }
 
-export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
+export const Carousel: React.FC<CarouselProps> = ({ onOpenContact, isChatOpen = false }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
@@ -144,12 +145,12 @@ export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
 
   return (
     <section
-      className="carousel-section"
+      className={`carousel-section ${isChatOpen ? 'is-compact-mode' : ''}`}
       aria-label="Soluciones para pequeños negocios"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="carousel-container">
+      <div className={`carousel-container ${isChatOpen ? 'compact-container' : ''}`}>
         {/* Carousel Viewport / Sliding Window */}
         <div className="carousel-viewport">
           <div
@@ -192,7 +193,10 @@ export const Carousel: React.FC<CarouselProps> = ({ onOpenContact }) => {
                     <button
                       type="button"
                       className="btn-slide-cta"
-                      onClick={onOpenContact}
+                      onClick={() => {
+                        if (onOpenContact) onOpenContact();
+                        window.dispatchEvent(new CustomEvent('superbot-focus-chat'));
+                      }}
                     >
                       <span>Solicitar información</span>
                       <ArrowRight size={17} />

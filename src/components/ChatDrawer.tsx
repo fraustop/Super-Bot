@@ -56,8 +56,24 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
       setTimeout(() => {
         inputRef.current?.focus();
       }, 250);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, messages]);
+  }, [isOpen, onClose, messages]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      inputRef.current?.focus();
+    };
+    window.addEventListener('superbot-focus-chat', handleFocus);
+    return () => window.removeEventListener('superbot-focus-chat', handleFocus);
+  }, []);
 
   useEffect(() => {
     setApiKeyInput(getGeminiApiKey());

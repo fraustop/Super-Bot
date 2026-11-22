@@ -49,7 +49,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="superbot-app">
+    <div className={`superbot-app ${isChatOpen ? 'chat-is-open' : ''}`}>
       <Header
         theme={theme}
         onToggleTheme={handleToggleTheme}
@@ -58,26 +58,31 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
       />
 
-      {/* Body: Solutions Carousel for small businesses */}
-      <main className="superbot-body" id="main-content">
-        <Carousel onOpenContact={() => setIsChatOpen(true)} />
+      {/* Body: Solutions Carousel for small businesses (remains fully visible on the left) */}
+      <main className={`superbot-body ${isChatOpen ? 'with-chat-open' : ''}`} id="main-content">
+        <Carousel
+          onOpenContact={() => setIsChatOpen(true)}
+          isChatOpen={isChatOpen}
+        />
       </main>
 
-      {/* Floating Chat Launcher */}
-      <button
-        type="button"
-        className="floating-chat-launcher"
-        onClick={() => setIsChatOpen(true)}
-        aria-label="Abrir chat con Super-Bot"
-        title="Pregúntale a Super-Bot"
-      >
-        <div className="launcher-icon-wrap">
-          <img src="/bot-icon.png" alt="Super-Bot" className="launcher-bot-img" />
-          <span className="launcher-online-dot"></span>
-        </div>
-        <span className="launcher-label">¿Dudas? Pregúntale a Super-Bot</span>
-        <MessageSquareText size={18} className="launcher-bubble-icon" />
-      </button>
+      {/* Floating Chat Launcher (visible when chat is closed) */}
+      {!isChatOpen && (
+        <button
+          type="button"
+          className="floating-chat-launcher"
+          onClick={() => setIsChatOpen(true)}
+          aria-label="Abrir chat con Super-Bot"
+          title="Pregúntale a Super-Bot"
+        >
+          <div className="launcher-icon-wrap">
+            <img src="/bot-icon.png" alt="Super-Bot" className="launcher-bot-img" />
+            <span className="launcher-online-dot"></span>
+          </div>
+          <span className="launcher-label">¿Dudas? Pregúntale a Super-Bot</span>
+          <MessageSquareText size={18} className="launcher-bubble-icon" />
+        </button>
+      )}
 
       {/* Right Side Chat Drawer */}
       <ChatDrawer
