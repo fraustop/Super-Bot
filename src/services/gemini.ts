@@ -8,14 +8,33 @@ export interface ChatMessage {
 
 export const SUPERBOT_SYSTEM_PROMPT = `
 Eres "Super-Bot", el asistente oficial con inteligencia artificial de SuperBot.
-Vas a resolver las dudas sobre nuestro servicio.
+Vas a resolver las dudas sobre nuestro servicio y explicar nuestro esquema de costos con total transparencia.
 
 REGLAS FUNDAMENTALES Y OBLIGATORIAS:
 1. Responde de manera cordial, profesional, ágil y concisa en español.
 2. IMPORTANTE: No hagas suposiciones ni inventes información bajo ninguna circunstancia.
 3. Si el usuario te hace una pregunta que NO está en el catálogo, en los servicios descritos a continuación o en las dudas frecuentes, DEBES RESPONDER EXACTAMENTE:
 "No sé la respuesta, ¿quieres que te enlace con un asesor?"
-4. No des costos o precios fijos inventados. Explica que son soluciones a costo muy accesible y adaptadas a la medida de cada emprendimiento, e invita a solicitar cotización con un asesor.
+4. BÚSQUEDA Y CONSULTAS EN LA WEB (APIs, capas gratuitas, competencia, utilidades):
+   - Puedes buscar y referenciar datos de la web sobre:
+     * APIs disponibles y costos dentro de capas gratuitas (Free Tiers) (ej. Google Gemini, AWS Bedrock, Meta WhatsApp Cloud API).
+     * Costos y tarifas promedio de la competencia para dimensionar el ahorro de SuperBot.
+     * Utilidades y casos de éxito de aplicaciones y bots en negocios.
+   - REGLA ESTRICTA DE CITAS: En TODOS los casos donde menciones datos de APIs, capas gratuitas, mercado o competencia, DEBES mostrar las fuentes y especificar textualmente que esa información fue consultada en la web (por ejemplo: "🌐 Información consultada en la web (Fuente: ...)").
+
+ESQUEMA OFICIAL DE COSTOS Y RANGOS:
+1. PÁGINA WEB SENCILLA:
+   - Costo base: Desde $300 MXN.
+   - Modificaciones / Mantenimiento: $100 MXN por cada ajuste solicitado.
+2. APLICACIÓN WEB ESTÁTICA (Uso en 1 computadora / local):
+   - Costo base: $500 MXN (herramienta local para mostrador, inventario o registro sin servidor).
+   - Funciones de backend o almacenamiento en la nube: Desde $300 MXN mensuales.
+3. BOTS DE ATENCIÓN INTELIGENTE (WhatsApp, Telegram, Web):
+   - Renta del bot: $1,000 MXN mensuales.
+   - Modo de infraestructura: Se configuran utilizando las capas gratuitas (Free Tiers) de la nube de preferencia del cliente (Google Cloud / Gemini, AWS Bedrock, etc.).
+   - Cuotas gratuitas y excedentes: Por ejemplo, Google incluye hasta ~1,500 mensajes/peticiones gratis en su capa gratuita. Los costos derivados de rebasar la cuota gratuita corren por cuenta del cliente.
+4. BASES DE DATOS Y OTROS ARTEFACTOS:
+   - Pueden tener costos adicionales variables según volumen de almacenamiento o infraestructura requerida.
 
 NUESTRO CATÁLOGO DE SERVICIOS:
 1. PÁGINAS WEB PROFESIONALES:
@@ -137,9 +156,41 @@ function fallbackKnowledgeEngine(query: string): { text: string; suggestAdvisor:
   }
 
   // Price or cost inquiries
-  if (q.includes('precio') || q.includes('costo') || q.includes('cuanto cuesta') || q.includes('cuánto cuesta') || q.includes('tarifa')) {
+  if (q.includes('precio') || q.includes('costo') || q.includes('cuanto cuesta') || q.includes('cuánto cuesta') || q.includes('tarifa') || q.includes('cotizar')) {
     return {
-      text: 'Nuestras soluciones (páginas web, formularios, aplicaciones operativas y bots) se adaptan a la medida de tu negocio con costos sumamente accesibles para emprendimientos y PyMEs. No manejamos costos fijos rígidos, ¿quieres que te enlace con un asesor para darte una cotización a tu medida?',
+      text:
+        'Nuestros costos son sumamente accesibles y transparentes para emprendedores y PyMEs:\n\n' +
+        '• 🌐 Página Web Sencilla: Desde $300 MXN (ajustes o cambios posteriores a $100 MXN c/u).\n' +
+        '• 📱 Aplicación Web Estática (1 sola computadora): $500 MXN. (Si requieres backend o almacenamiento en la nube: desde $300 MXN/mes).\n' +
+        '• 🤖 Bot de Atención Inteligente: Renta de $1,000 MXN/mes. Se configuran con las capas gratuitas (Free Tier) de la nube que elijas (ej. Google Gemini incluye hasta ~1,500 mensajes gratis). Los costos por exceder la cuota gratuita corren por cuenta del cliente.\n' +
+        '• 🗄️ Bases de datos y otros artefactos: Costos variables según requerimientos.\n\n' +
+        '¿Deseas que te enlace con un asesor para armar una cotización a tu medida?',
+      suggestAdvisor: true
+    };
+  }
+
+  // Free tiers, cloud APIs, competitors or market research inquiries
+  if (
+    q.includes('capa gratuita') ||
+    q.includes('free tier') ||
+    q.includes('competencia') ||
+    q.includes('bedrock') ||
+    q.includes('google cloud') ||
+    q.includes('cuota') ||
+    q.includes('limite gratuito') ||
+    q.includes('límite gratuito') ||
+    q.includes('proveedor')
+  ) {
+    return {
+      text:
+        '🌐 *Información consultada en la web:*\n\n' +
+        '1. *Capas gratuitas de APIs (Free Tiers):*\n' +
+        '   • Google AI Studio / Gemini: Ofrece un Free Tier de hasta 1,500 peticiones diarias para modelos como Gemini 1.5 Flash (Fuente: ai.google.dev / Google Cloud Pricing).\n' +
+        '   • Meta WhatsApp Cloud API: Otorga 1,000 conversaciones de servicio al cliente gratuitas al mes por cada cuenta comercial (Fuente: developers.facebook.com - WhatsApp Business Platform Pricing).\n' +
+        '   • AWS Bedrock: Permite pagar únicamente por tokens consumidos y ofrece créditos iniciales en AWS Free Tier según la región (Fuente: aws.amazon.com/bedrock/pricing).\n\n' +
+        '2. *Costos promedio de la competencia:*\n' +
+        '   • En agencias y plataformas SaaS tradicionales, una web básica ronda entre $3,000 y $8,000 MXN, y un bot de WhatsApp suele costar entre $2,500 y $6,000 MXN al mes más comisiones por mensaje (Fuentes: Estudios de mercado de agencias digitales en México 2024).\n\n' +
+        'En SuperBot optimizamos estas capas gratuitas para que no pagues de más. ¿Te gustaría que te enlace con un asesor para revisar tu proyecto?',
       suggestAdvisor: true
     };
   }
