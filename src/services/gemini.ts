@@ -2,7 +2,8 @@ import {
   getActiveBotKnowledge,
   isProductBlock,
   isServiceBlock,
-  isInstructionBlock
+  isInstructionBlock,
+  type BotKnowledgeBlock
 } from './botKnowledgeService';
 
 export interface ChatMessage {
@@ -19,9 +20,14 @@ export interface ChatMessage {
 
 export function buildDynamicSystemPrompt(): string {
   const kb = getActiveBotKnowledge();
+  const activeBlocks = (kb.knowledgeBlocks || []).filter((b) => b.status === 'active');
+  const products = activeBlocks.filter(isProductBlock);
+  const services = activeBlocks.filter(isServiceBlock);
+  const instructions = activeBlocks.filter(isInstructionBlock);
+
   return `
 Eres "Super-Bot", el asesor comercial y asistente inteligente oficial de SuperBot.
-Tu misión es atender a los clientes, resolver sus dudas sobre nuestros servicios, explicar nuestro esquema de costos con total claridad y motivarlos a hacer crecer su negocio con nuestras soluciones.
+Tu misión es atender a los clientes, resolver sus dudas sobre nuestros productos y servicios, explicar nuestro esquema de costos con total claridad y motivarlos a hacer crecer su negocio con nuestras soluciones.
 
 1. PERSONALIDAD Y ACTITUD DE VENDEDOR:
    - Actúa siempre como un vendedor profesional: cordial, entusiasta, empático, seguro y enfocado en aportar valor al negocio del cliente.
@@ -42,9 +48,11 @@ Tu misión es atender a los clientes, resolver sus dudas sobre nuestros servicio
      * En vez de "base de datos NoSQL": "un sistema seguro para guardar tus pedidos, clientes e inventario en tiempo real".
    - EXCEPCIÓN ÚNICA: Si el cliente solicita explícitamente un dato técnico puntual (ejemplo: "¿cuántos tokens incluye?", "¿qué memoria RAM o servidor usan?", "¿cuál es el RPM/TPM?", "¿qué base de datos es?"), respóndele con los datos técnicos exactos de manera precisa y concisa.
 
-3. REGLA ESTRICTA DE VERACIDAD:
+3. REGLA ESTRICTA DE VERACIDAD Y DOMINIO DEL CATÁLOGO:
    - IMPORTANTE: No hagas suposiciones ni inventes información bajo ninguna circunstancia.
-   - Si el usuario te hace una pregunta que NO está en el catálogo, en los servicios descritos a continuación o en las dudas frecuentes, DEBES RESPONDER EXACTAMENTE:
+   - DEBES CONOCER TODOS Y CADA UNO DE LOS PRODUCTOS Y SERVICIOS ACTIVOS REGISTRADOS EN NUESTRO CATÁLOGO (tanto soluciones web/software como cualquier producto o servicio personalizado creado por el administrador, por ejemplo: "papitas" o cualquier otro elemento publicado).
+   - Si el cliente te pregunta por cualquier producto o servicio que SÍ está en el catálogo a continuación, DEBES explicarlo con entusiasmo, desglosando su precio oficial, qué incluye, sus beneficios y cerrando con una invitación a ordenar.
+   - Si el usuario te hace una pregunta sobre algo que NO está en el catálogo, en los servicios descritos o en las dudas frecuentes, DEBES RESPONDER EXACTAMENTE:
      "No sé la respuesta, ¿quieres que te enlace con un asesor?"
 
 4. ASISTENCIA SI EL CLIENTE PREGUNTA SI PUEDE HACER LA PÁGINA ÉL MISMO:
@@ -60,58 +68,51 @@ Tu misión es atender a los clientes, resolver sus dudas sobre nuestros servicio
      * Utilidades y casos de éxito de aplicaciones y bots en negocios.
    - REGLA DE CITAS: En TODOS los casos donde menciones datos de APIs, capas gratuitas, mercado o competencia, DEBES mostrar las fuentes y especificar textualmente que esa información fue consultada en la web (por ejemplo: "🌐 Información consultada en la web (Fuente: ...)").
 
-6. MOTOR AUTÓNOMO DE COTIZACIONES (SIN INTERVENCIÓN DE ASESOR):
-   - Super-Bot DEBE calcular cotizaciones y presupuestos inmediatamente por sí mismo cuando el usuario lo solicite, sin esperar ni derivar obligatoriamente a un asesor.
-   - REGLAS DE COTIZACIÓN AUTÓNOMA:
-     * Calcula y desglosa el costo inicial (pago único) y el costo mensual recurrente (si aplica).
-     * Muestra siempre el comparativo frente a lo que cobra la competencia en el mercado (citando la fuente web) para evidenciar el ahorro que obtiene con SuperBot (siempre por debajo de la competencia).
-     * Muestra la transparencia de los Free Tiers en la nube (ej. ${kb.quotas.geminiFreeDaily} mensajes diarios gratis en Google Gemini, ${kb.quotas.whatsappFreeMonthly} conversaciones de servicio gratis en WhatsApp Cloud API).
-     * Si el cliente pide un paquete personalizado (ej. "web con bot de WhatsApp", "punto de venta con nube"), suma los conceptos con la tabla de tarifas y entrégale el total desglosado.
-     * Al final de la cotización, invita al cliente a iniciar el proyecto o solicitar confirmación si está listo para contratar.
-
-ESQUEMA OFICIAL DE COSTOS Y RANGOS EN VIVO:
-1. PÁGINA WEB SENCILLA:
-   - Costo base: Desde $${kb.pricing.webBasic} MXN (pago único inicial).
-   - Modificaciones / Mantenimiento: $${kb.pricing.webAdjustment} MXN por cada ajuste solicitado.
-2. APLICACIÓN WEB ESTÁTICA (Uso en 1 computadora / local):
-   - Costo base: $${kb.pricing.appStatic} MXN (herramienta local para mostrador, inventario o registro sin servidor).
-   - Funciones de backend o almacenamiento en la nube: Desde $${kb.pricing.appCloudMonthly} MXN mensuales.
-3. BOTS DE ATENCIÓN INTELIGENTE (WhatsApp, Telegram, Web):
-   - Renta del bot: $${kb.pricing.botMonthly} MXN mensuales.
-   - Modo de infraestructura: Se configuran en las capas gratuitas (Free Tiers) de la nube de preferencia del cliente (Google Cloud / Gemini, AWS Bedrock, etc.).
-   - Cuotas gratuitas y excedentes: Por ejemplo, Google incluye hasta ~${kb.quotas.geminiFreeDaily} mensajes/preguntas diarios gratis en su capa gratuita. Los costos derivados de rebasar la cuota gratuita corren por cuenta del cliente (centavos directos del proveedor sin sobreprecio).
-4. BASES DE DATOS Y OTROS ARTEFACTOS:
-   - Pueden tener costos adicionales variables según volumen de almacenamiento o infraestructura requerida.
+6. MOTOR AUTÓNOMO DE COTIZACIONES:
+   - Super-Bot DEBE calcular cotizaciones y presupuestos inmediatamente por sí mismo cuando el usuario lo solicite para cualquiera de los productos o servicios del catálogo.
+   - Calcula y desglosa el costo inicial (pago único) y el costo mensual recurrente (si aplica).
+   - Invita al cliente a iniciar el proyecto o solicitar confirmación si está listo para contratar.
 
 ${kb.customNotes ? `\nNOTAS Y PROMOCIONES ACTIVAS DEL ADMINISTRADOR:\n${kb.customNotes}\n` : ''}
-${(() => {
-  const activeBlocks = (kb.knowledgeBlocks || []).filter((b) => b.status === 'active');
-  if (activeBlocks.length === 0) return '';
-  const products = activeBlocks.filter(isProductBlock);
-  const services = activeBlocks.filter(isServiceBlock);
-  const instructions = activeBlocks.filter(isInstructionBlock);
 
-  let output = '\n=======================================================\n' +
-    'BASE DE CONOCIMIENTOS MAESTRA DINÁMICA (CONFIGURADA POR EL ENTRENADOR EN FIRESTORE):\n' +
-    '=======================================================\n';
+=======================================================
+CATÁLOGO OFICIAL Y VIGENTE DE PRODUCTOS Y SERVICIOS EN VIVO:
+=======================================================
+(IMPORTANTE: Este es el catálogo oficial de SuperBot. DEBES conocer todos los productos y servicios aquí registrados, incluyendo productos creados por el administrador como "papitas" o cualquier otro. Cuando el usuario pregunte por cualquiera de ellos o por lo que tenemos publicado, explícaselo con total claridad, precios y detalles).
 
-  if (products.length > 0) {
-    output += '\n--- SECCIÓN 1: PRODUCTOS DISPONIBLES EN EL CATÁLOGO (ENTREGA Y PAGO ÚNICO) ---\n' +
-      products.map((p, i) => `${i + 1}. [PRODUCTO] ${p.title}:\n   ${p.content}`).join('\n\n') + '\n';
-  }
+${products.length > 0 ? `📦 SECCIÓN 1: PRODUCTOS DISPONIBLES EN EL CATÁLOGO (PAGO ÚNICO / ENTREGA):\n` +
+  products.map((p, i) => {
+    const price = p.structuredData?.price !== undefined
+      ? `$${Number(p.structuredData.price).toLocaleString('es-MX')} MXN (pago único)`
+      : '';
+    const tag = p.structuredData?.tag ? ` [Etiqueta: ${p.structuredData.tag}]` : '';
+    const includes = p.structuredData?.includes ? `\n   - Qué incluye: ${p.structuredData.includes}` : '';
+    const format = p.structuredData?.deliveryFormat ? `\n   - Formato de entrega: ${p.structuredData.deliveryFormat}` : '';
+    const utils = Array.isArray(p.structuredData?.utilities) && p.structuredData.utilities.length > 0
+      ? '\n   - Beneficios clave:\n' + p.structuredData.utilities.filter((u: any) => u.title).map((u: any) => `     * ${u.title}: ${u.desc || ''}`).join('\n')
+      : '';
+    return `${i + 1}. [PRODUCTO] ${p.title}${tag}:${price ? `\n   - Costo oficial: ${price}` : ''}${format}${includes}${utils}\n   - Detalle oficial:\n${p.content}`;
+  }).join('\n\n') + '\n\n' : ''}
 
-  if (services.length > 0) {
-    output += '\n--- SECCIÓN 2: SERVICIOS Y MODALIDADES RECURRENTES (RENTAS Y MANTENIMIENTO) ---\n' +
-      services.map((s, i) => `${i + 1}. [SERVICIO] ${s.title}:\n   ${s.content}`).join('\n\n') + '\n';
-  }
+${services.length > 0 ? `🛠️ SECCIÓN 2: SERVICIOS Y MODALIDADES RECURRENTES (RENTAS Y MANTENIMIENTO):\n` +
+  services.map((s, i) => {
+    const price = s.structuredData?.monthlyPrice !== undefined
+      ? `$${Number(s.structuredData.monthlyPrice).toLocaleString('es-MX')} MXN/mes`
+      : s.structuredData?.adjustmentPrice !== undefined
+        ? `$${Number(s.structuredData.adjustmentPrice).toLocaleString('es-MX')} MXN por ajuste`
+        : '';
+    const tag = s.structuredData?.tag ? ` [Etiqueta: ${s.structuredData.tag}]` : '';
+    const freq = s.structuredData?.frequency ? ` (${s.structuredData.frequency})` : '';
+    const includes = s.structuredData?.includes ? `\n   - Alcance/Qué incluye: ${s.structuredData.includes}` : '';
+    const channels = s.structuredData?.channels ? `\n   - Canales: ${s.structuredData.channels}` : '';
+    const utils = Array.isArray(s.structuredData?.utilities) && s.structuredData.utilities.length > 0
+      ? '\n   - Beneficios clave:\n' + s.structuredData.utilities.filter((u: any) => u.title).map((u: any) => `     * ${u.title}: ${u.desc || ''}`).join('\n')
+      : '';
+    return `${i + 1}. [SERVICIO] ${s.title}${tag}:${price ? `\n   - Tarifa oficial: ${price}${freq}` : ''}${channels}${includes}${utils}\n   - Detalle oficial:\n${s.content}`;
+  }).join('\n\n') + '\n\n' : ''}
 
-  if (instructions.length > 0) {
-    output += '\n--- SECCIÓN 3: DIRECTRICES E INSTRUCCIONES ESPECÍFICAS AL ASESOR (TONO Y REGLAS) ---\n' +
-      instructions.map((ins, i) => `${i + 1}. [INSTRUCCIÓN OBLIGATORIA] ${ins.title}:\n   ${ins.content}`).join('\n\n') + '\n';
-  }
-
-  return output;
-})()}
+${instructions.length > 0 ? `🧠 SECCIÓN 3: DIRECTRICES E INSTRUCCIONES ESPECÍFICAS AL ASESOR (TONO Y REGLAS):\n` +
+  instructions.map((ins, i) => `${i + 1}. [DIRECTRIZ OBLIGATORIA] ${ins.title}:\n   ${ins.content}`).join('\n\n') + '\n\n' : ''}
 
 INFORMACIÓN DETALLADA DE CUOTAS DE IA, SERVIDORES Y PROVEEDORES EN LA NUBE:
 * Inteligencia Artificial (Google Gemini 1.5 Flash):
@@ -128,20 +129,6 @@ INFORMACIÓN DETALLADA DE CUOTAS DE IA, SERVIDORES Y PROVEEDORES EN LA NUBE:
 * Bases de Datos en la Nube (Firestore / Cloud):
   - Explicación sencilla: Guarda todos tus clientes, productos y pedidos de forma segura. Incluye hasta 50,000 consultas diarias gratis, suficiente para operar diario sin costo de almacenamiento.
   - Dato técnico (si lo piden): Firebase Spark Plan con 50,000 lecturas y 20,000 escrituras diarias y 1 GB de almacenamiento gratuito (🌐 Fuente: firebase.google.com/pricing).
-
-NUESTRO CATÁLOGO DE SERVICIOS:
-1. PÁGINAS WEB PROFESIONALES (Desde $${kb.pricing.webBasic} MXN):
-   - Para qué sirve: Tu negocio visible y vendiendo en internet con sitios web modernos, rápidos y optimizados para celulares que transmiten confianza y convierten visitas en clientes.
-   - Beneficios para el negocio: Presencia digital de alto impacto, diseñada para vender con botones a WhatsApp y cotizadores, carga instantánea en celulares y optimizada para Google.
-2. FORMULARIOS INTELIGENTES:
-   - Para qué sirve: Digitaliza la recepción de pedidos, cotizaciones y solicitudes en una interfaz rápida e intuitiva.
-   - Beneficios para el negocio: Recepción 24/7 sin esperas, cero errores de captura y conexión directa a correo o base de datos.
-3. APLICACIONES OPERATIVAS (Desde $${kb.pricing.appStatic} MXN):
-   - Para qué sirve: Herramientas sencillas para gestionar ventas en mostrador, inventarios de productos y pedidos diarios.
-   - Beneficios para el negocio: Inventario al instante con alertas, punto de venta ágil para cobrar en segundos y métricas claras.
-4. BOTS DE ATENCIÓN MULTICANAL ($${kb.pricing.botMonthly} MXN/mes):
-   - Para qué sirve: Asistente con Inteligencia Artificial que atiende a tus prospectos en WhatsApp, Telegram y Web 24/7.
-   - Beneficios para el negocio: Respuestas inmediatas a dudas frecuentes y traspaso a humano cuando el cliente está listo para comprar.
 `;
 }
 
@@ -255,23 +242,33 @@ export async function askGemini(
   return fallbackKnowledgeEngine(newMessage);
 }
 
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
 function fallbackKnowledgeEngine(query: string): {
   text: string;
   suggestAdvisor: boolean;
   actionLink?: { url: string; label: string };
 } {
-  const q = query.toLowerCase().trim();
+  const q = normalizeText(query);
   const kb = getActiveBotKnowledge();
+  const activeBlocks = (kb.knowledgeBlocks || []).filter((b) => b.status === 'active');
+  const products = activeBlocks.filter(isProductBlock);
+  const services = activeBlocks.filter(isServiceBlock);
 
-  // 1. Direct advisor request
+  // 1. Direct advisor or human contact request
   if (
     q.includes('asesor') ||
     q.includes('humano') ||
     q.includes('hablar con') ||
     q.includes('contacto') ||
     q.includes('llamada') ||
-    q.includes('telefono') ||
-    q.includes('teléfono')
+    q.includes('telefono')
   ) {
     return {
       text: '¡Con gusto te enlazo con nuestro equipo comercial! Puedes elegir si prefieres recibir una llamada telefónica o un mensaje por WhatsApp para revisar tu proyecto sin compromiso.',
@@ -288,14 +285,11 @@ function fallbackKnowledgeEngine(query: string): {
     q.includes('hacer mi propia') ||
     q.includes('crear mi propia') ||
     q.includes('hacer una pagina yo') ||
-    q.includes('hacer una página yo') ||
     q.includes('puedo hacer mi') ||
     q.includes('puedo crear mi') ||
     q.includes('hacerla por mi cuenta') ||
     q.includes('hacerlo por mi cuenta') ||
-    (q.includes('ayud') &&
-      (q.includes('hacer') || q.includes('crear') || q.includes('programar') || q.includes('diseñar')) &&
-      (q.includes('pagina') || q.includes('página') || q.includes('web') || q.includes('sitio')));
+    (q.includes('ayud') && (q.includes('hacer') || q.includes('crear') || q.includes('programar') || q.includes('disenar')) && (q.includes('pagina') || q.includes('web') || q.includes('sitio')));
 
   if (isSelfBuild) {
     return {
@@ -312,112 +306,221 @@ function fallbackKnowledgeEngine(query: string): {
     };
   }
 
-  // 3. Autonomous Quotation Engine (Dynamic prices from Firestore / Active Knowledge)
+  // 3. Search for specific Product or Service in Active Knowledge Blocks (Dynamic Catalog)
+  const stopwords = new Set([
+    'que', 'los', 'las', 'les', 'por', 'para', 'con', 'una', 'uno', 'unos', 'unas',
+    'del', 'de', 'la', 'el', 'en', 'es', 'un', 'al', 'se', 'me', 'mi', 'tu', 'te',
+    'como', 'cual', 'cuales', 'tiene', 'tienen', 'vende', 'venden', 'sobre', 'mas',
+    'hola', 'buenas', 'buenos', 'dias', 'tardes', 'noches', 'saludos', 'favor',
+    'quiero', 'quisiera', 'puedo', 'pueden', 'ayuda', 'cuanto', 'cuesta', 'cuestan',
+    'precio', 'costo', 'cotiza', 'cotizacion', 'saber', 'info', 'informacion', 'tienes', 'vendes'
+  ]);
+
+  const queryWords = q
+    .split(/[^a-z0-9]+/i)
+    .filter((w) => w.length >= 3 && !stopwords.has(w));
+
+  let bestMatch: { block: BotKnowledgeBlock; score: number } | null = null;
+
+  for (const b of [...products, ...services]) {
+    const bTitleNorm = normalizeText(b.title || '');
+    const bTagNorm = normalizeText(b.structuredData?.tag || '');
+    const bPublicTitleNorm = normalizeText(b.structuredData?.publicTitle || '');
+    const bSummaryNorm = normalizeText(b.summary || '');
+    const bIncludesNorm = normalizeText(b.structuredData?.includes || '');
+    const bContentNorm = normalizeText(b.content || '');
+
+    let score = 0;
+
+    // Full phrase matches
+    if (bTitleNorm && q.includes(bTitleNorm)) score += 60;
+    if (bTagNorm && q.includes(bTagNorm)) score += 45;
+    if (bPublicTitleNorm && q.includes(bPublicTitleNorm)) score += 40;
+
+    // Word matches from block title into query
+    const titleWords = bTitleNorm.split(/[^a-z0-9]+/i).filter((w) => w.length >= 3 && !stopwords.has(w));
+    for (const tw of titleWords) {
+      if (q.includes(tw)) score += 25;
+    }
+
+    // Word matches from query into block
+    for (const qw of queryWords) {
+      if (bTitleNorm.includes(qw)) score += 20;
+      else if (bTagNorm.includes(qw)) score += 15;
+      else if (bPublicTitleNorm.includes(qw)) score += 12;
+      else if (bSummaryNorm.includes(qw)) score += 10;
+      else if (bIncludesNorm.includes(qw)) score += 8;
+      else if (bContentNorm.includes(qw)) score += 5;
+
+      if (Array.isArray(b.structuredData?.utilities)) {
+        for (const u of b.structuredData.utilities) {
+          const uTitle = normalizeText(u.title || '');
+          const uDesc = normalizeText(u.desc || '');
+          if (uTitle.includes(qw)) score += 10;
+          if (uDesc.includes(qw)) score += 5;
+        }
+      }
+    }
+
+    if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { block: b, score };
+    }
+  }
+
   const isQuoting =
     q.includes('cotiz') ||
     q.includes('presupuesto') ||
-    q.includes('cuanto me sal') ||
-    q.includes('cuánto me sal') ||
-    q.includes('cuanto cuesta') ||
-    q.includes('cuánto cuesta') ||
+    q.includes('cuanto') ||
     q.includes('costo') ||
     q.includes('precio') ||
     q.includes('tarifa') ||
     q.includes('paquete');
 
-  if (isQuoting) {
-    // 3.1 Combo / Paquete integral (Web + Bot o POS + Bot)
-    if (
-      (q.includes('bot') || q.includes('whatsapp')) &&
-      (q.includes('web') || q.includes('pagina') || q.includes('página') || q.includes('pos') || q.includes('app') || q.includes('combo') || q.includes('todo'))
-    ) {
-      return {
-        text:
-          '📋 *COTIZACIÓN ESTIMADA: PAQUETE INTEGRAL DIGITAL*\n\n' +
-          `• 🌐 *Página Web Profesional:* $${kb.pricing.webBasic} MXN (pago único inicial).\n` +
-          `• 🤖 *Bot de Atención en WhatsApp con IA:* $${kb.pricing.botMonthly} MXN / mes.\n` +
-          `• ☁️ *Infraestructura Cloud:* $0 adicionales en cuota gratuita (incluye hasta ${kb.quotas.geminiFreeDaily} mensajes diarios con Google Gemini y ${kb.quotas.whatsappFreeMonthly} conversaciones de atención en WhatsApp al mes).\n\n` +
-          '💰 *TOTAL DE LA PROPUESTA:*\n' +
-          `• *Pago único de inicio:* $${kb.pricing.webBasic} MXN\n` +
-          `• *Renta mensual:* $${kb.pricing.botMonthly} MXN / mes (sin contratos forzosos)\n\n` +
-          '📊 *Comparativa de mercado (🌐 Fuente web: Estudios de agencias digitales en México 2024):*\n' +
-          '• En agencias tradicionales este combo cuesta entre $7,500 y $15,000 MXN de setup + más de $3,500 MXN/mes.\n' +
-          '👉 *¡Con SuperBot ahorras más del 80% comparado con la competencia!* ¿Qué te parece si arrancamos con tu paquete integral esta misma semana?',
-        suggestAdvisor: true
-      };
+  if (bestMatch && bestMatch.score >= 12) {
+    const b = bestMatch.block;
+    const isProd = isProductBlock(b);
+    const priceText = isProd
+      ? (b.structuredData?.price !== undefined ? `$${Number(b.structuredData.price).toLocaleString('es-MX')} MXN (pago único)` : 'A cotizar')
+      : (b.structuredData?.monthlyPrice !== undefined
+          ? `$${Number(b.structuredData.monthlyPrice).toLocaleString('es-MX')} MXN/mes`
+          : b.structuredData?.adjustmentPrice !== undefined
+            ? `$${Number(b.structuredData.adjustmentPrice).toLocaleString('es-MX')} MXN por ajuste`
+            : 'A cotizar');
+
+    const includes = b.structuredData?.includes || b.summary || '';
+    const utilities = (b.structuredData?.utilities || []).filter((u: any) => u.title?.trim());
+    const advice = b.structuredData?.advisorInstructions || '';
+
+    let res = '';
+    if (isQuoting) {
+      res += `📋 *COTIZACIÓN OFICIAL: ${b.title.toUpperCase()}*\n\n`;
+      res += `• 💰 *Costo oficial:* ${priceText}\n`;
+      if (includes) {
+        res += `• 📦 *Qué incluye:* ${includes}\n`;
+      }
+      if (b.structuredData?.deliveryFormat) {
+        res += `• 🚚 *Formato de entrega:* ${b.structuredData.deliveryFormat}\n`;
+      }
+      if (b.structuredData?.channels) {
+        res += `• 📱 *Canales de operación:* ${b.structuredData.channels}\n`;
+      }
+      if (utilities.length > 0) {
+        res += `\n✨ *Beneficios destacados:*\n` +
+          utilities.map((u: any) => `  - **${u.title.trim()}:** ${u.desc?.trim() || ''}`).join('\n') + '\n';
+      }
+      res += `\n👉 *¡En SuperBot obtienes precios claros y directos sin costos ocultos!* ¿Te gustaría que iniciemos con tu orden de **${b.title}**?`;
+    } else {
+      res += `¡Sí, claro que sí! En nuestro catálogo oficial de SuperBot contamos con **${b.title}**:\n\n`;
+      res += `• 💰 *Precio / Tarifa:* ${priceText}\n`;
+      if (includes) {
+        res += `• 📦 *Qué incluye:* ${includes}\n`;
+      }
+      if (b.structuredData?.deliveryFormat) {
+        res += `• 🚚 *Formato de entrega:* ${b.structuredData.deliveryFormat}\n`;
+      }
+      if (b.structuredData?.channels) {
+        res += `• 📱 *Canales:* ${b.structuredData.channels}\n`;
+      }
+      if (utilities.length > 0) {
+        res += `\n✨ *Detalles y beneficios:*\n` +
+          utilities.map((u: any) => `  - **${u.title.trim()}:** ${u.desc?.trim() || ''}`).join('\n') + '\n';
+      }
+      if (advice) {
+        res += `\n💡 *Detalle:* ${advice}\n`;
+      }
+      res += `\n¿Te gustaría que te preparemos una orden o cotización personalizada para **${b.title}**?`;
     }
 
-    // 3.2 Cotización de Página Web
-    if (q.includes('web') || q.includes('pagina') || q.includes('página') || q.includes('landing') || q.includes('sitio')) {
-      return {
-        text:
-          '📋 *COTIZACIÓN ESTIMADA: PÁGINA WEB PROFESIONAL*\n\n' +
-          `• 🌐 *Página Web de Alto Impacto:* Desde $${kb.pricing.webBasic} MXN (pago único).\n` +
-          '  - Incluye: Diseño responsivo para celulares, optimización SEO para Google y botón directo a WhatsApp.\n' +
-          `• 🛠️ *Ajustes o secciones adicionales:* $${kb.pricing.webAdjustment} MXN por cada cambio o sección extra.\n\n` +
-          `💰 *TOTAL DE LA PROPUESTA:* Desde *$${kb.pricing.webBasic} MXN* (pago único, sin mensualidades obligatorias).\n\n` +
-          '📊 *Comparativa de mercado (🌐 Fuente web: Artech & Nebugrama 2024):*\n' +
-          '• El precio promedio de una web básica en México oscila entre $4,000 y $9,000 MXN.\n' +
-          '👉 *¡En SuperBot obtienes presencia profesional garantizada por una fracción del costo!* ¿Te gustaría que comencemos a diseñarla hoy mismo?',
-        suggestAdvisor: true
-      };
-    }
-
-    // 3.3 Cotización de Aplicación Web Operativa / POS / Inventario
-    if (
-      q.includes('aplicacion') ||
-      q.includes('aplicación') ||
-      q.includes('app') ||
-      q.includes('pos') ||
-      q.includes('inventario') ||
-      q.includes('punto de venta')
-    ) {
-      const needsCloud = q.includes('nube') || q.includes('servidor') || q.includes('backend') || q.includes('sucursal') || q.includes('celular');
-      return {
-        text:
-          '📋 *COTIZACIÓN ESTIMADA: APLICACIÓN OPERATIVA / POS*\n\n' +
-          `• 🖥️ *Versión Local (1 computadora / mostrador):* $${kb.pricing.appStatic} MXN (pago único, sin mensualidades).\n` +
-          `• ☁️ *Versión Cloud con Base de Datos:* $${kb.pricing.appStatic} MXN inicial + desde $${kb.pricing.appCloudMonthly} MXN / mes (permite ver inventarios y ventas en tiempo real desde tu celular o varias computadoras).\n\n` +
-          `💰 *TOTAL DE LA PROPUESTA:* ${needsCloud ? `$${kb.pricing.appStatic} MXN inicial + $${kb.pricing.appCloudMonthly} MXN/mes` : `$${kb.pricing.appStatic} MXN pago único`}.\n\n` +
-          '📊 *Comparativa de mercado (🌐 Fuente web: Siigo & Alegra México 2024):*\n' +
-          '• Los sistemas POS en la nube comerciales cobran entre $600 y $1,500 MXN mensuales por caja o sucursal.\n' +
-          '👉 *¡Con SuperBot ahorras más del 60% mensual y tienes el control total de tu negocio!* ¿Te gustaría que activemos tu aplicación operativa?',
-        suggestAdvisor: true
-      };
-    }
-
-    // 3.4 Cotización de Bot de Atención
-    if (q.includes('bot') || q.includes('whatsapp') || q.includes('telegram')) {
-      return {
-        text:
-          '📋 *COTIZACIÓN ESTIMADA: BOT DE ATENCIÓN INTELIGENTE*\n\n' +
-          `• 🤖 *Renta de Software del Bot:* $${kb.pricing.botMonthly} MXN / mes.\n` +
-          `• ☁️ *Consumo de IA y Mensajes:* $0 adicionales en cuota gratuita (Google Gemini incluye hasta ~${kb.quotas.geminiFreeDaily} mensajes diarios y Meta WhatsApp ${kb.quotas.whatsappFreeMonthly} conversaciones de clientes gratis al mes).\n` +
-          '• 📈 *Sin sobreprecios:* Si superas la cuota gratuita, solo cubres el consumo neto directo del proveedor (centavos por mensaje).\n\n' +
-          `💰 *TOTAL DE LA PROPUESTA:* *$${kb.pricing.botMonthly} MXN / mes* (sin costos ocultos ni plazos forzosos).\n\n` +
-          '📊 *Comparativa de mercado (🌐 Fuente web: Kosmo IA & Uniamos 2024):*\n' +
-          '• Las agencias de chatbots en México cobran desde $2,500 hasta $8,000 MXN mensuales + instalación de más de $10,000 MXN.\n' +
-          '👉 *¡Con SuperBot tienes IA de última generación atendiendo a tus clientes 24/7 a un tercio del costo!* ¿Deseas configurarlo para tu número de WhatsApp?',
-        suggestAdvisor: true
-      };
-    }
-
-    // 3.5 Cotización General / Resumen de tarifas
     return {
-      text:
-        '📋 *COTIZADOR AUTÓNOMO SUPERBOT: RANGOS DE PRECIOS*\n\n' +
-        `• 🌐 *Página Web Profesional:* Desde $${kb.pricing.webBasic} MXN (ajustes a $${kb.pricing.webAdjustment} MXN c/u).\n` +
-        `• 📱 *Aplicación Web Estática (1 PC):* $${kb.pricing.appStatic} MXN pago único (con sincronización en la nube: desde $${kb.pricing.appCloudMonthly} MXN/mes).\n` +
-        `• 🤖 *Bot de Atención Inteligente:* $${kb.pricing.botMonthly} MXN/mes aprovechando cuotas gratuitas (ej. Google Gemini con hasta ${kb.quotas.geminiFreeDaily} mensajes diarios gratis).\n` +
-        '• 🗄️ *Bases de datos y artefactos:* Variables según requerimientos de almacenamiento.\n\n' +
-        '📊 *Comparativa de mercado (🌐 Fuente web: Estudios de desarrollo web y software en México 2024):*\n' +
-        '• En agencias tradicionales los costos van de $4,000 a $15,000 MXN. En SuperBot nuestros precios son siempre transparentes, justos y accesibles.\n\n' +
-        '¿Qué solución le vendría mejor a tu negocio en este momento?',
+      text: res,
       suggestAdvisor: true
     };
   }
 
-  // 4. Server, cloud quotas, hosting, technical inquiries
+  // 4. General Catalog / Offerings Query
+  const isCatalogQuery =
+    q.includes('que hacen') ||
+    q.includes('que ofrecen') ||
+    q.includes('que venden') ||
+    q.includes('que tienen') ||
+    q.includes('que productos') ||
+    q.includes('que servicios') ||
+    q.includes('catalogo') ||
+    q.includes('productos') ||
+    q.includes('publicado') ||
+    q.includes('publicados') ||
+    q.includes('servicios') ||
+    q.includes('hola') ||
+    q.includes('saludos') ||
+    q.includes('buenas');
+
+  if (isCatalogQuery) {
+    let text = '¡Hola! Qué gusto saludarte. En SuperBot ayudamos a emprendedores y negocios a vender más y modernizarse. Estos son los productos y servicios actualmente disponibles en nuestro catálogo:\n\n';
+
+    if (products.length > 0) {
+      text += '📦 *PRODUCTOS DISPONIBLES (Pago único):*\n';
+      products.forEach((p, idx) => {
+        const price = p.structuredData?.price !== undefined
+          ? `$${Number(p.structuredData.price).toLocaleString('es-MX')} MXN`
+          : '';
+        text += `${idx + 1}. **${p.title}**${price ? ` (${price})` : ''}: ${p.summary || p.structuredData?.includes || 'Listo para entrega.'}\n`;
+      });
+      text += '\n';
+    }
+
+    if (services.length > 0) {
+      text += '🛠️ *SERVICIOS Y MODALIDADES RECURRENTES:*\n';
+      services.forEach((s, idx) => {
+        const price = s.structuredData?.monthlyPrice !== undefined
+          ? `$${Number(s.structuredData.monthlyPrice).toLocaleString('es-MX')} MXN/mes`
+          : s.structuredData?.adjustmentPrice !== undefined
+            ? `$${Number(s.structuredData.adjustmentPrice).toLocaleString('es-MX')} MXN/ajuste`
+            : '';
+        text += `${idx + 1}. **${s.title}**${price ? ` (${price})` : ''}: ${s.summary || s.structuredData?.includes || 'Atención continua.'}\n`;
+      });
+      text += '\n';
+    }
+
+    text += '¿Sobre cuál de estas opciones te gustaría conocer más detalles o solicitar una cotización?';
+
+    return {
+      text,
+      suggestAdvisor: false
+    };
+  }
+
+  // 5. General Quotation / Price list
+  if (isQuoting) {
+    let text = '📋 *COTIZADOR AUTÓNOMO SUPERBOT: RANGOS DE PRECIOS VIGENTES*\n\n';
+    if (products.length > 0) {
+      text += '📦 *PRODUCTOS (Pago único):*\n';
+      products.forEach((p) => {
+        const price = p.structuredData?.price !== undefined ? `$${Number(p.structuredData.price).toLocaleString('es-MX')} MXN` : 'A cotizar';
+        text += `• **${p.title}:** ${price}\n`;
+      });
+      text += '\n';
+    }
+    if (services.length > 0) {
+      text += '🛠️ *SERVICIOS (Rentas y ajustes):*\n';
+      services.forEach((s) => {
+        const price = s.structuredData?.monthlyPrice !== undefined
+          ? `$${Number(s.structuredData.monthlyPrice).toLocaleString('es-MX')} MXN/mes`
+          : s.structuredData?.adjustmentPrice !== undefined
+            ? `$${Number(s.structuredData.adjustmentPrice).toLocaleString('es-MX')} MXN/ajuste`
+            : 'A cotizar';
+        text += `• **${s.title}:** ${price}\n`;
+      });
+      text += '\n';
+    }
+    text += '📊 *Comparativa de mercado:*\n• En SuperBot nuestros precios son siempre transparentes, justos y directos sin contratos forzosos.\n\n¿Qué solución o producto se adapta mejor a tu negocio?';
+
+    return {
+      text,
+      suggestAdvisor: true
+    };
+  }
+
+  // 6. Server, cloud quotas, hosting, technical inquiries
   const isTechnical =
     q.includes('token') ||
     q.includes('tokens') ||
@@ -429,10 +532,7 @@ function fallbackKnowledgeEngine(query: string): {
     q.includes('webhook') ||
     q.includes('microservicio') ||
     q.includes('dato tecnico') ||
-    q.includes('dato técnico') ||
-    q.includes('especificacion') ||
-    q.includes('especificación') ||
-    q.includes('firestore tecnico');
+    q.includes('especificacion');
 
   const isServerOrQuota =
     q.includes('servidor') ||
@@ -445,10 +545,6 @@ function fallbackKnowledgeEngine(query: string): {
     q.includes('capa gratuita') ||
     q.includes('free tier') ||
     q.includes('limite gratuito') ||
-    q.includes('límite gratuito') ||
-    q.includes('proveedor') ||
-    q.includes('bedrock') ||
-    q.includes('google cloud') ||
     isTechnical;
 
   if (isServerOrQuota) {
@@ -457,21 +553,20 @@ function fallbackKnowledgeEngine(query: string): {
         text:
           '🌐 *Especificaciones Técnicas de Infraestructura Cloud:*\n\n' +
           `• 🤖 *Google Gemini 1.5 Flash:* Capa gratuita de 15 RPM, 1,000,000 TPM y ${kb.quotas.geminiFreeDaily} peticiones/día. Costo en plan Pay-As-You-Go: $0.075 USD por 1M tokens de entrada y $0.30 USD por 1M tokens de salida (🌐 Fuente: ai.google.dev/pricing).\n\n` +
-          `• 💬 *Meta WhatsApp Cloud API:* ${kb.quotas.whatsappFreeMonthly} Service Conversations mensuales gratuitas por WABA oficial. Mensajes salientes de utilidad/marketing entre $0.035 y $0.063 USD por conversación en México (🌐 Fuente: developers.facebook.com).\n\n` +
-          '• ☁️ *Alojamiento y CDN:* Firebase Hosting / Global Edge CDN con 10 GB de almacenamiento, 360 MB/día de transferencia gratuita y certificado SSL TLS automático. Servidores VPS dedicados opcionales desde $4 USD/mes en AWS EC2 o GCP.\n\n' +
+          `• 💬 *Meta WhatsApp Cloud API:* ${kb.quotas.whatsappFreeMonthly} Service Conversations mensuales gratuitas por WABA oficial. Mensajes salientes entre $0.035 y $0.063 USD por conversación en México (🌐 Fuente: developers.facebook.com).\n\n` +
+          '• ☁️ *Alojamiento y CDN:* Firebase Hosting / Global Edge CDN con 10 GB de almacenamiento, 360 MB/día de transferencia gratuita y certificado SSL TLS automático.\n\n' +
           '• 🗄️ *Base de datos NoSQL:* Firestore Spark Plan con 50,000 lecturas y 20,000 escrituras diarias y 1 GB de almacenamiento gratuito (🌐 Fuente: firebase.google.com).\n\n' +
           '¿Deseas que adaptemos esta infraestructura para el proyecto de tu negocio?',
         suggestAdvisor: true
       };
     }
 
-    // Default: Friendly salesperson explanation, zero jargon, clear business value
     return {
       text:
         '¡Con gusto te explico! En SuperBot aprovechamos la mejor tecnología en la nube para que tengas máxima velocidad y el mejor precio sin costos ocultos ni letras chiquitas:\n\n' +
-        `• 🤖 *Inteligencia Artificial para tu Bot:* Google Gemini te incluye hasta *${kb.quotas.geminiFreeDaily} mensajes o preguntas diarias totalmente gratis*. Esto cubre de sobra a todos los clientes que te escriban en un día normal. Si tu negocio crece y superas esa cuota, el costo adicional es de solo centavos (alrededor de $1.50 MXN por cada 1,000 mensajes extra).\n\n` +
-        `• 💬 *WhatsApp Oficial:* Meta te regala *${kb.quotas.whatsappFreeMonthly} conversaciones de clientes gratis al mes*. Solo si envías campañas masivas se paga una pequeña tarifa directa a Meta.\n\n` +
-        '• 🌐 *Páginas y Servidores:* Tu sitio se aloja en servidores de alta velocidad en la nube con candado de seguridad SSL y protección continua, *sin costo mensual de servidor* para proyectos estándar porque la capacidad gratuita cubre decenas de miles de visitas al mes.\n\n' +
+        `• 🤖 *Inteligencia Artificial para tu Bot:* Google Gemini te incluye hasta *${kb.quotas.geminiFreeDaily} mensajes o preguntas diarias totalmente gratis*. Esto cubre de sobra a todos los clientes de un día normal sin pagar nada extra.\n\n` +
+        `• 💬 *WhatsApp Oficial:* Meta te regala *${kb.quotas.whatsappFreeMonthly} conversaciones de clientes gratis al mes*.\n\n` +
+        '• 🌐 *Páginas y Servidores:* Servidores de alta velocidad en la nube con candado de seguridad SSL y protección continua, *sin costo mensual de servidor* para proyectos estándar.\n\n' +
         '• 🗄️ *Base de datos segura:* Guarda tus productos, clientes y pedidos con hasta 50,000 consultas diarias gratis.\n\n' +
         '*(🌐 Información consultada en la web: ai.google.dev, developers.facebook.com y firebase.google.com)*\n\n' +
         '¿Te gustaría que te preparemos una cotización a la medida de tu negocio?',
@@ -479,85 +574,7 @@ function fallbackKnowledgeEngine(query: string): {
     };
   }
 
-  // 5. Web pages inquiries
-  if (
-    q.includes('web') ||
-    q.includes('pagina') ||
-    q.includes('página') ||
-    q.includes('sitio') ||
-    q.includes('landing') ||
-    q.includes('portal')
-  ) {
-    return {
-      text: `Diseñamos Páginas Web profesionales, ultra rápidas y optimizadas para celulares desde solo $${kb.pricing.webBasic} MXN. Incluyen diseño a la medida que destaca tu negocio frente a la competencia, botón directo a WhatsApp y cotizador para convertir visitantes en clientes reales. ¿Te gustaría ver cómo quedaría la tuya?`,
-      suggestAdvisor: false
-    };
-  }
-
-  // 6. Forms inquiries
-  if (
-    q.includes('formulario') ||
-    q.includes('intake') ||
-    q.includes('cotizacion') ||
-    q.includes('cotización') ||
-    q.includes('pedido')
-  ) {
-    return {
-      text: 'Nuestros Formularios Inteligentes permiten digitalizar la recepción de pedidos, cotizaciones y solicitudes 24/7 sin esperas. Evitan errores manuales validando la información en tiempo real y conectándose directo a tu correo o base de datos, sin mensualidades costosas. ¿Qué tipo de pedidos o registros te gustaría recibir?',
-      suggestAdvisor: false
-    };
-  }
-
-  // 7. Operational apps inquiries
-  if (
-    q.includes('aplicacion') ||
-    q.includes('aplicación') ||
-    q.includes('app') ||
-    q.includes('inventario') ||
-    q.includes('pos') ||
-    q.includes('punto de venta') ||
-    q.includes('stock')
-  ) {
-    return {
-      text: `Nuestras Aplicaciones Operativas (desde $${kb.pricing.appStatic} MXN) están diseñadas para pequeños negocios: te permiten controlar existencias e inventarios con alertas de reabastecimiento, cobrar en mostrador en pocos segundos y ver cuánto vendiste en el día desde tu celular o computadora. ¿Te gustaría modernizar las ventas de tu negocio?`,
-      suggestAdvisor: false
-    };
-  }
-
-  // 8. Bots inquiries (WhatsApp, Telegram, Web)
-  if (
-    q.includes('bot') ||
-    q.includes('whatsapp') ||
-    q.includes('telegram') ||
-    q.includes('pregunta') ||
-    q.includes('atencion') ||
-    q.includes('atención') ||
-    q.includes('chat')
-  ) {
-    return {
-      text: `Nuestros Bots de Atención ($${kb.pricing.botMonthly} MXN/mes) atienden en WhatsApp, Telegram y en tu sitio Web 24/7. Resuelven dudas frecuentes de inmediato (horarios, catálogos, métodos de pago, envíos) y cuando el cliente está listo para comprar, te avisan al instante para cerrar la venta. ¿En qué canal te gustaría instalar tu bot?`,
-      suggestAdvisor: false
-    };
-  }
-
-  // 9. General services question / Welcome
-  if (
-    q.includes('que hacen') ||
-    q.includes('qué hacen') ||
-    q.includes('que ofrecen') ||
-    q.includes('qué ofrecen') ||
-    q.includes('servicios') ||
-    q.includes('hola') ||
-    q.includes('saludos') ||
-    q.includes('buenas')
-  ) {
-    return {
-      text: `¡Hola! Qué gusto saludarte. En SuperBot ayudamos a emprendedores y negocios a vender más y modernizarse con 4 soluciones accesibles:\n\n1. 🌐 *Páginas Web Profesionales:* desde $${kb.pricing.webBasic} MXN para que destaques y vendas en internet.\n2. 📋 *Formularios Inteligentes:* para recibir pedidos y cotizaciones 24/7 sin errores.\n3. 📱 *Aplicaciones Operativas:* desde $${kb.pricing.appStatic} MXN para control de inventarios y cobro rápido en mostrador.\n4. 🤖 *Bots de Atención en WhatsApp, Telegram y Web:* $${kb.pricing.botMonthly} MXN/mes para responder a tus clientes al instante.\n\n¿Cuál de estas soluciones te gustaría implementar en tu negocio?`,
-      suggestAdvisor: false
-    };
-  }
-
-  // 10. STRICT RULE: If it's not in the catalog or FAQ:
+  // 7. STRICT RULE: If it's not in the catalog or FAQ:
   return {
     text: 'No sé la respuesta, ¿quieres que te enlace con un asesor?',
     suggestAdvisor: true
