@@ -5189,6 +5189,79 @@ html, body {
   color: #fee2e2;
 }
 
+/* Utilities Editor in Admin Modal */
+.btn-add-utility-tiny {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-add-utility-tiny:hover {
+  background: rgba(56, 189, 248, 0.28);
+  border-color: var(--accent-cyan);
+}
+
+.utilities-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.utility-editor-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.utility-editor-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.utility-badge-number {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.12);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.btn-remove-utility-tiny {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.25rem;
+  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-remove-utility-tiny:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fee2e2;
+}
+
 .btn-sync-to-prompt {
   width: 100%;
   display: inline-flex;

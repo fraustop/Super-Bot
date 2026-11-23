@@ -158,9 +158,11 @@ function blockToSlide(block: BotKnowledgeBlock, index: number): SlideData {
   // Title: prefer publicTitle, then summary if it's punchy, then title
   const title = block.structuredData?.publicTitle?.trim() || block.summary?.trim() || block.title;
 
-  // Subtitle: use includes, advisorInstructions, or summary
+  // Subtitle: prefer publicSubtitle, then advisorInstructions, includes, or summary
   let subtitle = '';
-  if (block.structuredData?.advisorInstructions) {
+  if (block.structuredData?.publicSubtitle?.trim()) {
+    subtitle = block.structuredData.publicSubtitle.trim();
+  } else if (block.structuredData?.advisorInstructions) {
     subtitle = block.structuredData.advisorInstructions;
   } else if (block.structuredData?.includes) {
     subtitle = `Incluye: ${block.structuredData.includes}`;

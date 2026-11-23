@@ -109,6 +109,8 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       imageUrl: '/carousel-websites.jpg',
       publishedToHome: true,
       tag: 'Páginas Web Profesionales',
+      publicTitle: 'Tu Negocio en Internet con una Web Moderna y Vendedora',
+      publicSubtitle: 'Diseño profesional, rápido y optimizado para celulares con botón directo a WhatsApp para que nunca pierdas una venta.',
       utilities: [
         { title: 'Presencia digital de alto impacto', desc: 'Destaca frente a tus competidores con un diseño a la medida, confiable y accesible desde cualquier dispositivo.' },
         { title: 'Diseñada para convertir y vender', desc: 'Estructura clara con botones directos a WhatsApp, cotizadores y llamadas a la acción sin rodeos.' },
@@ -146,6 +148,8 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       imageUrl: '/carousel-forms.jpg',
       publishedToHome: true,
       tag: 'Formularios Inteligentes',
+      publicTitle: 'Captura de Pedidos y Clientes sin Complicaciones',
+      publicSubtitle: 'Digitaliza la recepción de solicitudes, cotizaciones y pedidos en una interfaz rápida, intuitiva y accesible para tu emprendimiento.',
       utilities: [
         { title: 'Recepción 24/7 sin esperas', desc: 'Tus clientes pueden cotizar o enviar sus pedidos en cualquier momento sin perder la venta.' },
         { title: 'Cero errores de captura', desc: 'La información se valida en tiempo real y se envía directo a tu base de datos o correo.' },
@@ -184,6 +188,8 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       imageUrl: '/carousel-apps.jpg',
       publishedToHome: true,
       tag: 'Aplicaciones Operativas',
+      publicTitle: 'El Control Diario de tu Negocio en tu Mano',
+      publicSubtitle: 'Herramientas sencillas para gestionar ventas en mostrador, inventarios de productos y pedidos diarios sin sistemas complicados.',
       utilities: [
         { title: 'Inventario y stock al instante', desc: 'Conoce exactamente qué productos tienes disponibles y recibe alertas de reabastecimiento.' },
         { title: 'Punto de venta ágil', desc: 'Registra cobros, métodos de pago y pedidos de tus clientes en pocos segundos.' },
@@ -224,6 +230,8 @@ export const DEFAULT_KNOWLEDGE_BLOCKS: BotKnowledgeBlock[] = [
       imageUrl: '/carousel-bots.jpg',
       publishedToHome: true,
       tag: 'Bots de Atención (Web, WhatsApp y Telegram)',
+      publicTitle: 'Respuestas Instantáneas y Cierre de Ventas',
+      publicSubtitle: 'Un asistente inteligente que atiende las dudas de tus prospectos en los canales donde ya se comunican y no deja escapar ninguna venta.',
       utilities: [
         { title: 'Atención en WhatsApp y Telegram', desc: 'Responde automáticamente en las apps de mensajería más usadas por tus clientes.' },
         { title: 'Preguntas frecuentes resueltas al segundo', desc: 'Horarios, catálogos, formas de entrega, métodos de pago y detalles de tus servicios.' },

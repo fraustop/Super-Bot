@@ -119,6 +119,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
       if (channels) lines.push(`- **Canales de operación:** ${channels}`);
       if (inc) lines.push(`- **Alcance y cobertura:** ${inc}`);
       if (advice) lines.push(`- **Consigna para el Asesor:** ${advice}`);
+      if (Array.isArray(b.structuredData?.utilities)) {
+        const validUtils = b.structuredData.utilities.filter((u) => u.title?.trim());
+        if (validUtils.length > 0) {
+          const utilsText = validUtils.map((u) => `  - **${u.title.trim()}:** ${u.desc?.trim() || ''}`).join('\n');
+          lines.push(`- **Beneficios clave en catálogo:**\n${utilsText}`);
+        }
+      }
       return lines.join('\n\n');
     }
     // Product
@@ -133,6 +140,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (inc) lines.push(`- **Qué incluye:** ${inc}`);
     if (addOns) lines.push(`- **Paquetes complementarios:** ${addOns}`);
     if (advice) lines.push(`- **Consigna para el Asesor:** ${advice}`);
+    if (Array.isArray(b.structuredData?.utilities)) {
+      const validUtils = b.structuredData.utilities.filter((u) => u.title?.trim());
+      if (validUtils.length > 0) {
+        const utilsText = validUtils.map((u) => `  - **${u.title.trim()}:** ${u.desc?.trim() || ''}`).join('\n');
+        lines.push(`- **Beneficios clave en catálogo:**\n${utilsText}`);
+      }
+    }
     return lines.join('\n\n');
   };
 
@@ -214,10 +228,68 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Open modal to manually edit an existing block
   const handleOpenManualEdit = (block: BotKnowledgeBlock) => {
-    setEditingBlock(JSON.parse(JSON.stringify(block)));
+    const cloned: BotKnowledgeBlock = JSON.parse(JSON.stringify(block));
+    if (!cloned.structuredData) {
+      cloned.structuredData = {};
+    }
+
+    if (cloned.category === 'product' || cloned.category === 'service') {
+      if (!cloned.structuredData.publicTitle) {
+        cloned.structuredData.publicTitle = cloned.summary || cloned.title;
+      }
+      if (!cloned.structuredData.publicSubtitle) {
+        if (cloned.id === 'block-prod-app-pos') {
+          cloned.structuredData.publicSubtitle = 'Herramientas sencillas para gestionar ventas en mostrador, inventarios de productos y pedidos diarios sin sistemas complicados.';
+        } else if (cloned.id === 'block-prod-web-basic') {
+          cloned.structuredData.publicSubtitle = 'Diseño profesional, rápido y optimizado para celulares con botón directo a WhatsApp para que nunca pierdas una venta.';
+        } else if (cloned.id === 'block-prod-form') {
+          cloned.structuredData.publicSubtitle = 'Digitaliza la recepción de solicitudes, cotizaciones y pedidos en una interfaz rápida, intuitiva y accesible para tu emprendimiento.';
+        } else if (cloned.id === 'block-serv-bot-monthly') {
+          cloned.structuredData.publicSubtitle = 'Un asistente inteligente que atiende las dudas de tus prospectos en los canales donde ya se comunican y no deja escapar ninguna venta.';
+        } else {
+          cloned.structuredData.publicSubtitle = cloned.structuredData.advisorInstructions || cloned.summary || '';
+        }
+      }
+
+      if (!Array.isArray(cloned.structuredData.utilities) || cloned.structuredData.utilities.length === 0) {
+        if (cloned.id === 'block-prod-app-pos') {
+          cloned.structuredData.utilities = [
+            { title: 'Inventario y stock al instante', desc: 'Conoce exactamente qué productos tienes disponibles y recibe alertas de reabastecimiento.' },
+            { title: 'Punto de venta ágil', desc: 'Registra cobros, métodos de pago y pedidos de tus clientes en pocos segundos.' },
+            { title: 'Métricas claras y útiles', desc: 'Visualiza cuánto has vendido hoy y qué productos son los favoritos de tus clientes.' }
+          ];
+        } else if (cloned.id === 'block-prod-web-basic') {
+          cloned.structuredData.utilities = [
+            { title: 'Presencia digital de alto impacto', desc: 'Destaca frente a tus competidores con un diseño a la medida, confiable y accesible desde cualquier dispositivo.' },
+            { title: 'Diseñada para convertir y vender', desc: 'Estructura clara con botones directos a WhatsApp, cotizadores y llamadas a la acción sin rodeos.' },
+            { title: 'Velocidad ultra rápida y optimizada', desc: 'Carga instantánea con código ágil y moderno para que tus clientes locales te encuentren sin demoras.' }
+          ];
+        } else if (cloned.id === 'block-prod-form') {
+          cloned.structuredData.utilities = [
+            { title: 'Recepción 24/7 sin esperas', desc: 'Tus clientes pueden cotizar o enviar sus pedidos en cualquier momento sin perder la venta.' },
+            { title: 'Cero errores de captura', desc: 'La información se valida en tiempo real y se envía directo a tu base de datos o correo.' },
+            { title: 'Sin software costoso', desc: 'Una solución directa y a la medida que reemplaza procesos en papel o mensajes desordenados.' }
+          ];
+        } else if (cloned.id === 'block-serv-bot-monthly') {
+          cloned.structuredData.utilities = [
+            { title: 'Atención en WhatsApp y Telegram', desc: 'Responde automáticamente en las apps de mensajería más usadas por tus clientes.' },
+            { title: 'Preguntas frecuentes resueltas al segundo', desc: 'Horarios, catálogos, formas de entrega, métodos de pago y detalles de tus servicios.' },
+            { title: 'Pase a humano cuando toque cerrar', desc: 'El bot califica el interés y te avisa cuando el cliente requiere confirmación personalizada.' }
+          ];
+        } else {
+          cloned.structuredData.utilities = [
+            { title: '', desc: '' },
+            { title: '', desc: '' },
+            { title: '', desc: '' }
+          ];
+        }
+      }
+    }
+
+    setEditingBlock(cloned);
     setIsNewManualBlock(false);
     setPromptViewMode('edit');
-    const img = block.imageUrl || block.structuredData?.imageUrl || '';
+    const img = cloned.imageUrl || cloned.structuredData?.imageUrl || '';
     setImageSourceMode(img.startsWith('data:image/') ? 'upload' : 'url');
     setImageUploadError(null);
   };
@@ -242,7 +314,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
         imageUrl: '',
         publishedToHome: true,
         tag: cat === 'product' ? 'Páginas Web' : cat === 'service' ? 'Bots de Atención' : 'Directriz',
-        utilities: []
+        publicTitle: '',
+        publicSubtitle: '',
+        utilities: cat === 'product' || cat === 'service' ? [
+          { title: '', desc: '' },
+          { title: '', desc: '' },
+          { title: '', desc: '' }
+        ] : []
       },
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -281,6 +359,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
     cleanedStructured.imageUrl = imgUrl;
     cleanedStructured.publishedToHome = isPub;
+
+    // Preserve public card title and subtitle
+    if (editingBlock.structuredData?.publicTitle !== undefined) {
+      cleanedStructured.publicTitle = (editingBlock.structuredData.publicTitle || '').trim();
+    }
+    if (editingBlock.structuredData?.publicSubtitle !== undefined) {
+      cleanedStructured.publicSubtitle = (editingBlock.structuredData.publicSubtitle || '').trim();
+    }
+
+    // Clean utilities array
+    if (Array.isArray(editingBlock.structuredData?.utilities)) {
+      cleanedStructured.utilities = editingBlock.structuredData.utilities
+        .map((u) => ({
+          title: (u.title || '').trim(),
+          desc: (u.desc || '').trim()
+        }))
+        .filter((u) => u.title !== '' || u.desc !== '');
+    }
 
     // Ensure prompt content is preserved
     const promptContent = editingBlock.content?.trim() || generateContentFromBlock(editingBlock);
@@ -1731,6 +1827,137 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         placeholder={editingBlock.category === 'product' ? 'Ej. Páginas Web Profesionales' : 'Ej. Bots de Atención'}
                         className="field-input-compact text-cyan-200"
                       />
+                    </div>
+
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Título en Tarjeta de Inicio:</label>
+                      <input
+                        type="text"
+                        value={editingBlock.structuredData?.publicTitle || ''}
+                        onChange={(e) => setEditingBlock({
+                          ...editingBlock,
+                          structuredData: {
+                            ...editingBlock.structuredData,
+                            publicTitle: e.target.value
+                          }
+                        })}
+                        placeholder={editingBlock.summary || editingBlock.title || 'Ej. El Control Diario de tu Negocio en tu Mano'}
+                        className="field-input-compact font-bold text-cyan-200"
+                      />
+                    </div>
+
+                    <div className="left-field-group">
+                      <label className="field-label-compact">Subtítulo en Tarjeta de Inicio:</label>
+                      <textarea
+                        rows={2}
+                        value={editingBlock.structuredData?.publicSubtitle || ''}
+                        onChange={(e) => setEditingBlock({
+                          ...editingBlock,
+                          structuredData: {
+                            ...editingBlock.structuredData,
+                            publicSubtitle: e.target.value
+                          }
+                        })}
+                        placeholder="Ej. Herramientas sencillas para gestionar ventas en mostrador, inventarios de productos y pedidos diarios."
+                        className="field-textarea-compact"
+                      />
+                    </div>
+
+                    {/* Las 3 tarjetas de beneficios / utilidades */}
+                    <div className="left-field-group">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="field-label-compact flex items-center gap-1 text-cyan-300">
+                          <CheckCircle2 size={12} />
+                          <span>Tarjetas de Detalles (Beneficios en Inicio):</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="btn-add-utility-tiny"
+                          onClick={() => {
+                            const currentUtils = editingBlock.structuredData?.utilities || [];
+                            setEditingBlock({
+                              ...editingBlock,
+                              structuredData: {
+                                ...editingBlock.structuredData,
+                                utilities: [...currentUtils, { title: '', desc: '' }]
+                              }
+                            });
+                          }}
+                          title="Agregar otra tarjeta"
+                        >
+                          <Plus size={11} />
+                          <span>Agregar</span>
+                        </button>
+                      </div>
+                      <span className="file-upload-hint mb-1">
+                        Modifica las tarjetas que aparecen en el inicio (ej. Inventario y stock, Punto de venta, Métricas):
+                      </span>
+
+                      <div className="utilities-editor-list">
+                        {(editingBlock.structuredData?.utilities || []).map((util, uIdx) => (
+                          <div key={uIdx} className="utility-editor-card">
+                            <div className="utility-editor-card-header">
+                              <span className="utility-badge-number">Tarjeta #{uIdx + 1}</span>
+                              {(editingBlock.structuredData?.utilities || []).length > 1 && (
+                                <button
+                                  type="button"
+                                  className="btn-remove-utility-tiny"
+                                  onClick={() => {
+                                    const nextUtils = [...(editingBlock.structuredData?.utilities || [])];
+                                    nextUtils.splice(uIdx, 1);
+                                    setEditingBlock({
+                                      ...editingBlock,
+                                      structuredData: {
+                                        ...editingBlock.structuredData,
+                                        utilities: nextUtils
+                                      }
+                                    });
+                                  }}
+                                  title="Eliminar esta tarjeta"
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1 mt-1">
+                              <input
+                                type="text"
+                                value={util.title}
+                                onChange={(e) => {
+                                  const nextUtils = [...(editingBlock.structuredData?.utilities || [])];
+                                  nextUtils[uIdx] = { ...nextUtils[uIdx], title: e.target.value };
+                                  setEditingBlock({
+                                    ...editingBlock,
+                                    structuredData: {
+                                      ...editingBlock.structuredData,
+                                      utilities: nextUtils
+                                    }
+                                  });
+                                }}
+                                placeholder={`Título (ej. ${uIdx === 0 ? 'Inventario y stock al instante' : uIdx === 1 ? 'Punto de venta ágil' : 'Métricas claras y útiles'})`}
+                                className="field-input-compact font-bold text-cyan-200"
+                              />
+                              <textarea
+                                rows={2}
+                                value={util.desc}
+                                onChange={(e) => {
+                                  const nextUtils = [...(editingBlock.structuredData?.utilities || [])];
+                                  nextUtils[uIdx] = { ...nextUtils[uIdx], desc: e.target.value };
+                                  setEditingBlock({
+                                    ...editingBlock,
+                                    structuredData: {
+                                      ...editingBlock.structuredData,
+                                      utilities: nextUtils
+                                    }
+                                  });
+                                }}
+                                placeholder="Descripción concisa de este beneficio o utilidad"
+                                className="field-textarea-compact text-xs"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="left-field-group">
